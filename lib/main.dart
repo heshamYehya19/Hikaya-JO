@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-
+import 'core/theme/app_theme.dart';
+import 'core/router/go_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // no options needed — google-services.json handles it on Android
+  await Firebase.initializeApp();
   runApp(const ProviderScope(child: HikayaJoApp()));
 }
 
@@ -14,15 +15,11 @@ class HikayaJoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Hikaya JO',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2E1A47), // placeholder — swap for your brand color
-      ),
-      home: const Scaffold(
-        body: Center(child: Text('Hikaya JO 🇯🇴')),
-      ),
+      theme: AppTheme.lightTheme,
+      routerConfig: appRouter,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
