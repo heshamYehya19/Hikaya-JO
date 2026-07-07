@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "704781867986",
+    "project_id": "hikaya-jo",
+    "storage_bucket": "hikaya-jo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704781867986:android:2d2f943b37975516df860b",
+        "android_client_info": {
+          "package_name": "com.hr.hikaya_jo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1FSQeoqFsDnNQAZctOq3DiA-97k_AXWs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
