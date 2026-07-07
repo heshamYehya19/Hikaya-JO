@@ -1,4 +1,4 @@
-package com.example.hikaya_jo;
+package com.hr.hikaya_jo;
 
 import io.flutter.embedding.android.FlutterActivity;
 
