@@ -4,9 +4,10 @@ import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/signup_screen.dart';
+import '../../features/hikaya_hunt/geofence_test_screen.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/geofence-test', // TEMP — change back after testing
   routes: [
     GoRoute(
       path: '/',
@@ -34,6 +35,11 @@ final appRouter = GoRouter(
       builder: (context, state) => const Scaffold(
         body: Center(child: Text('Home Dashboard — coming in Week 3')),
       ),
+    ),
+    GoRoute(
+      path: '/geofence-test',
+      name: 'geofenceTest',
+      builder: (context, state) => const GeofenceTestScreen(),
     ),
   ],
 );
