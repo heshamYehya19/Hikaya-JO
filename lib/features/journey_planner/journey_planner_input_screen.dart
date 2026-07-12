@@ -36,6 +36,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
         transportMode: _transport,
       );
       ref.read(currentJourneyProvider.notifier).state = journey;
+      await ref.read(journeyServiceProvider).saveJourney(journey); // persist it
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
       }

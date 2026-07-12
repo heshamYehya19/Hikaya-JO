@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class JourneyStop {
   final String destinationId;
   final String destinationName;
@@ -44,6 +46,24 @@ class Journey {
   final int totalDurationMinutes;
   final double totalCost;
   final DateTime createdAt;
+  factory Journey.fromMap(String id, Map<String, dynamic> map) {
+    return Journey(
+      id: id,
+      stops: (map['stops'] as List)
+          .map((s) => JourneyStop.fromMap(s as Map<String, dynamic>))
+          .toList(),
+      totalDurationMinutes: map['totalDurationMinutes'] ?? 0,
+      totalCost: (map['totalCost'] ?? 0).toDouble(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'stops': stops.map((s) => s.toMap()).toList(),
+    'totalDurationMinutes': totalDurationMinutes,
+    'totalCost': totalCost,
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
 
   Journey({
     required this.id,

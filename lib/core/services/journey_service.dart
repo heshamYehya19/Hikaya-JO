@@ -4,6 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class JourneyService {
   late final GenerativeModel _model;
@@ -15,6 +16,31 @@ class JourneyService {
     _model = GenerativeModel(model: modelName, apiKey: apiKey);
   }
 
+  Future<void> saveJourney(Journey journey) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('No logged-in user');
+
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('journeys')
+        .doc(journey.id)
+        .set(journey.toMap());
+  }
+
+  Future<List<Journey>> fetchUserJourneys() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return [];
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('journeys')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs.map((doc) => Journey.fromMap(doc.id, doc.data())).toList();
+  }
   Future<List<Destination>> fetchAllDestinations() async {
     final snapshot = await _firestore.collection('destinations').get();
     return snapshot.docs.map((doc) => Destination.fromMap(doc.id, doc.data())).toList();
@@ -22,11 +48,16 @@ class JourneyService {
 
   Future<Journey> generateJourney({
     required List<String> interests,
-    required String budgetLevel, // "low", "medium", "high"
+    required String budgetLevel,
     required int availableHours,
-    required String transportMode, // "car", "public", "walking"
+    required String transportMode,
+    int maxRetries = 3,
   }) async {
     final destinations = await fetchAllDestinations();
+
+    if (destinations.isEmpty) {
+      throw Exception('No destinations found — did you run the /seed screen?');
+    }
 
     final destinationsJson = destinations
         .map((d) => {
@@ -67,26 +98,44 @@ Return JSON in exactly this shape:
   "totalCost": number
 }
 
-Only include stops that realistically fit within $availableHours hours total, accounting for travel time between locations via $transportMode.
+IMPORTANT: The user has $availableHours hours total (${availableHours * 60} minutes). Add up each stop's durationMinutes plus roughly 30 minutes of travel time between each pair of consecutive stops. The sum must not exceed ${availableHours * 60} minutes. Choose fewer stops if needed to stay within this budget — do not include a stop unless it fits.
 ''';
 
-    final response = await _model.generateContent([Content.text(prompt)]);
-    final rawText = response.text?.trim() ?? '{}';
+    int attempt = 0;
+    while (true) {
+      try {
+        final response = await _model.generateContent([Content.text(prompt)]);
+        final rawText = response.text?.trim() ?? '{}';
+        print('DEBUG journey raw response: $rawText'); // temporary — remove once confirmed working
 
-    // Strip markdown code fences if Gemini adds them despite instructions
-    final cleaned = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
+        final cleaned = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
+        final parsed = jsonDecode(cleaned) as Map<String, dynamic>;
 
-    final parsed = jsonDecode(cleaned) as Map<String, dynamic>;
-    final stops = (parsed['stops'] as List)
-        .map((s) => JourneyStop.fromMap(s as Map<String, dynamic>))
-        .toList();
+        final stops = (parsed['stops'] as List)
+            .map((s) => JourneyStop.fromMap(s as Map<String, dynamic>))
+            .toList();
 
-    return Journey(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      stops: stops,
-      totalDurationMinutes: parsed['totalDurationMinutes'] ?? 0,
-      totalCost: (parsed['totalCost'] ?? 0).toDouble(),
-      createdAt: DateTime.now(),
-    );
+// Don't trust Gemini's self-reported totals — compute them ourselves
+// from the actual stops it returned, so the numbers are always internally consistent.
+        final visitMinutes = stops.fold<int>(0, (sum, stop) => sum + stop.durationMinutes);
+        final estimatedTravelMinutes = stops.length > 1 ? (stops.length - 1) * 30 : 0; // rough 30min buffer between stops
+        final computedTotalDuration = visitMinutes + estimatedTravelMinutes;
+        final computedTotalCost = stops.fold<double>(0, (sum, stop) => sum + stop.estimatedCost);
+
+        return Journey(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          stops: stops,
+          totalDurationMinutes: computedTotalDuration,
+          totalCost: computedTotalCost,
+          createdAt: DateTime.now(),
+        );
+      } catch (e) {
+        attempt++;
+        print('DEBUG journey generation attempt $attempt failed: $e');
+        final isRetryable = e.toString().contains('503') || e.toString().contains('UNAVAILABLE');
+        if (!isRetryable || attempt >= maxRetries) rethrow;
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      }
+    }
   }
 }

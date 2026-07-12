@@ -25,11 +25,9 @@ class TranslationService {
     while (true) {
       try {
         final response = await _model.generateContent([Content.text(prompt)]);
-        print('DEBUG: translation took ${stopwatch.elapsedMilliseconds}ms, attempt #$attempt');
         return response.text?.trim() ?? '';
       } catch (e) {
         attempt++;
-        print('DEBUG: attempt $attempt failed after ${stopwatch.elapsedMilliseconds}ms: $e');
         final isRetryable = e.toString().contains('503') || e.toString().contains('UNAVAILABLE');
         if (!isRetryable || attempt >= maxRetries) rethrow;
         await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
