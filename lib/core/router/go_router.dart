@@ -42,6 +42,11 @@ final appRouter = GoRouter(
       builder: (context, state) => const MainShell(),
     ),
     GoRoute(
+      path: '/seed',
+      name: 'seed',
+      builder: (context, state) => const SeedScreen(),
+    ),
+    GoRoute(
       path: '/geofence-test',
       name: 'geofenceTest',
       builder: (context, state) => const GeofenceTestScreen(),
