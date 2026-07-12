@@ -7,6 +7,8 @@ import '../../features/auth/signup_screen.dart';
 import '../../features/hikaya_talk/hikaya_talk_screen.dart';
 import '../../features/hikaya_hunt/geofence_test_screen.dart';
 import '../../features/home/main_shell.dart';
+import '../../features/journey_planner/seed_screen.dart';
+
 
 final appRouter = GoRouter(
   initialLocation: '/',

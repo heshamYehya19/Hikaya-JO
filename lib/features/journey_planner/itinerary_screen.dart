@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
 import '../../providers/journey_provider.dart';
+import 'destination_detail_screen.dart';
 
 class ItineraryScreen extends ConsumerWidget {
   const ItineraryScreen({super.key});
@@ -40,14 +41,18 @@ class ItineraryScreen extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final stop = journey.stops[index];
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.duneLight),
-                      ),
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => DestinationDetailScreen(destinationId: stop.destinationId)),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.duneLight),
+                          ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -77,7 +82,7 @@ class ItineraryScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                  );
+                      ) );
                 },
               ),
             ),
