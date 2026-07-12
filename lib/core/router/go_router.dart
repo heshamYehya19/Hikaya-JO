@@ -5,8 +5,9 @@ import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/hikaya_talk/hikaya_talk_screen.dart';
+import '../../features/hikaya_hunt/geofence_test_screen.dart';
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/', // TEMP — change back after testing
   routes: [
     GoRoute(
       path: '/talk',
@@ -56,6 +57,11 @@ final appRouter = GoRouter(
           ),
         ),
       ),
+    ),
+    GoRoute(
+      path: '/geofence-test',
+      name: 'geofenceTest',
+      builder: (context, state) => const GeofenceTestScreen(),
     ),
   ],
 );
