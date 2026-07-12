@@ -6,8 +6,10 @@ import '../../features/auth/login_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/hikaya_talk/hikaya_talk_screen.dart';
 import '../../features/hikaya_hunt/geofence_test_screen.dart';
+import '../../features/home/main_shell.dart';
+
 final appRouter = GoRouter(
-  initialLocation: '/', // TEMP — change back after testing
+  initialLocation: '/',
   routes: [
     GoRoute(
       path: '/talk',
@@ -37,26 +39,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/home',
       name: 'home',
-      builder: (context, state) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Home Dashboard — coming in Week 3'),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => context.goNamed('hikayaTalk'),
-                child: const Text('🗣️ Test Hikaya Talk'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => context.goNamed('geofenceTest'),
-                child: const Text('📍 Test Geofencing'),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context, state) => const MainShell(),
     ),
     GoRoute(
       path: '/geofence-test',
