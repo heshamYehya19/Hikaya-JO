@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_dotenv: ^5.2.1
+
+  google_generative_ai: ^0.4.6
 
   # State management & routing
   flutter_riverpod: ^2.5.1
