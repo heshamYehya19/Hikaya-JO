@@ -51,7 +51,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
   // Target language name for the Gemini translation prompt
   String get _targetLanguage =>
-      _direction == TalkDirection.touristToLocal ? 'Arabic' : 'English';
+      _direction == TalkDirection.touristToLocal ? 'ar' : 'en';
 
   // TTS output language
   String get _outputLocale =>
