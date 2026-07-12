@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
 import '../../providers/journey_provider.dart';
 import 'destination_detail_screen.dart';
+import 'journey_map_screen.dart';
 
 class ItineraryScreen extends ConsumerWidget {
   const ItineraryScreen({super.key});
@@ -32,6 +33,19 @@ class ItineraryScreen extends ConsumerWidget {
                   _StatChip(label: 'Duration', value: '${(journey.totalDurationMinutes / 60).toStringAsFixed(1)}h'),
                   _StatChip(label: 'Est. Cost', value: '${journey.totalCost.toStringAsFixed(0)} JOD'),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => JourneyMapScreen(journey: journey)),
+                  ),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('View on Map'),
+                ),
               ),
             ),
             Expanded(
@@ -97,6 +111,7 @@ class _StatChip extends StatelessWidget {
   final String label;
   final String value;
   const _StatChip({required this.label, required this.value});
+
 
   @override
   Widget build(BuildContext context) {
