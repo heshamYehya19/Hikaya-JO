@@ -35,6 +35,8 @@ dependencies:
 
   google_generative_ai: ^0.4.6
 
+  image_picker: ^1.1.2
+
   # State management & routing
   flutter_riverpod: ^2.5.1
   go_router: ^14.2.0

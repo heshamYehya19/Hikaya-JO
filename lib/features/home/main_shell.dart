@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
-import '../hikaya_hunt/geofence_test_screen.dart';
+import '../hikaya_hunt/challenge_list_screen.dart';
 import '../hikaya_talk/hikaya_talk_screen.dart';
+import '../profile/profile_screen.dart';
+
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -18,9 +20,9 @@ class _MainShellState extends State<MainShell> {
   final _screens = const [
     HomeScreen(),
     JourneyPlannerInputScreen(),
-    GeofenceTestScreen(), // placeholder until real Hunt UI is built in Week 4
+    const ChallengeListScreen(),
     HikayaTalkScreen(),
-    Center(child: Text('Profile — coming soon')),
+    const ProfileScreen(),
   ];
 
   @override

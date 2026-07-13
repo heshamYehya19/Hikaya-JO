@@ -22,6 +22,7 @@ class LocationService {
   Future<Position> getCurrentPosition() {
     return Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
+      timeLimit: const Duration(seconds: 10),
     );
   }
 
