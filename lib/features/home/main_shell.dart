@@ -4,6 +4,8 @@ import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
 import '../hikaya_hunt/challenge_list_screen.dart';
 import '../hikaya_talk/hikaya_talk_screen.dart';
+import '../profile/profile_screen.dart';
+
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -20,7 +22,7 @@ class _MainShellState extends State<MainShell> {
     JourneyPlannerInputScreen(),
     const ChallengeListScreen(),
     HikayaTalkScreen(),
-    Center(child: Text('Profile — coming soon')),
+    const ProfileScreen(),
   ];
 
   @override

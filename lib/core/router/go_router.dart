@@ -11,7 +11,7 @@ import '../../features/journey_planner/seed_screen.dart';
 import '../../core/services/challenge_seed_service.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/seed',
+  initialLocation: '/',
   routes: [
     GoRoute(
       path: '/talk',
