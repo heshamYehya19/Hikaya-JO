@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/seed_service.dart';
 import '../../core/theme/colors.dart';
+import '../../core/services/challenge_seed_service.dart';
 
 class SeedScreen extends StatefulWidget {
   const SeedScreen({super.key});
@@ -20,6 +21,7 @@ class _SeedScreenState extends State<SeedScreen> {
     });
     try {
       await SeedService().seedDestinations();
+      await ChallengeSeedService().seedChallenges();
       setState(() => _status = '✅ 10 destinations seeded successfully');
     } catch (e) {
       setState(() => _status = 'ERROR: $e');
