@@ -3,6 +3,7 @@ import '../../core/theme/colors.dart';
 import '../../core/services/location_service.dart';
 import '../../models/challenge.dart';
 import 'camera_capture_screen.dart';
+import '../../core/services/hunt_service.dart';
 
 class ChallengeDetailScreen extends StatefulWidget {
   final Challenge challenge;
@@ -117,6 +118,24 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                   ),
                 ),
               ],
+              // TODO: remove before submission - start
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () async {
+                    final huntService = HuntService();
+                    await huntService.completeChallenge(challenge);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('DEV: challenge force-completed')),
+                      );
+                    }
+                  },
+                  child: const Text('🛠️ DEV: Force Complete (skip location check)'),
+                ),
+              ),
+              // end
             ],
           ),
         ),

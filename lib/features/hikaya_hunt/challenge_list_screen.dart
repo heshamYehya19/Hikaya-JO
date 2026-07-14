@@ -30,11 +30,14 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 
   Future<void> _load() async {
     setState(() => _isLoading = true);
+
     final challenges = await _huntService.fetchChallenges();
+
     final completed = await _huntService.fetchCompletedChallengeIds();
 
     final Map<String, double> distances = {};
     final hasPermission = await _locationService.ensureLocationPermission();
+
     if (hasPermission) {
       try {
         final pos = await _locationService.getCurrentPosition();
@@ -47,7 +50,8 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
           ) /
               1000;
         }
-      } catch (_) {}
+      } catch (e) {
+      }
     }
 
     challenges.sort((a, b) => (distances[a.id] ?? 999999).compareTo(distances[b.id] ?? 999999));
@@ -58,6 +62,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
       _distances = distances;
       _isLoading = false;
     });
+
   }
 
   @override
