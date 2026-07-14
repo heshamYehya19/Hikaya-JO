@@ -4,6 +4,7 @@ import '../../core/theme/colors.dart';
 import '../../core/services/story_guide_service.dart';
 import '../../models/destination.dart';
 import '../../providers/story_guide_provider.dart';
+import '../business_directory/business_list_widget.dart';
 
 class DestinationDetailScreen extends ConsumerStatefulWidget {
   final String destinationId;
@@ -176,6 +177,8 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
                   style: const TextStyle(fontSize: 15, height: 1.6, fontStyle: FontStyle.italic),
                 ),
               ),
+              const SizedBox(height: 28),
+              BusinessListWidget(destinationId: widget.destinationId),
             ],
           ),
         ),

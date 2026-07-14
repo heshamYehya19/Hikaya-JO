@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/business_seed_service.dart';
 import '../../core/services/seed_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/services/challenge_seed_service.dart';
@@ -22,6 +23,7 @@ class _SeedScreenState extends State<SeedScreen> {
     try {
       await SeedService().seedDestinations();
       await ChallengeSeedService().seedChallenges();
+      await BusinessSeedService().seedBusinesses();
       setState(() => _status = '✅ 10 destinations seeded successfully');
     } catch (e) {
       setState(() => _status = 'ERROR: $e');
