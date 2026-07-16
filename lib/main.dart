@@ -5,10 +5,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/go_router.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+import 'core/services/offline_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");   // ← this line is likely missing
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp();
+  await Hive.initFlutter();
+  await OfflineService.init();
   runApp(const ProviderScope(child: HikayaJoApp()));
 }
 

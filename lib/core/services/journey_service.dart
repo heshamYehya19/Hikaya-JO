@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'offline_service.dart';
 
 class JourneyService {
   late final GenerativeModel _model;
@@ -42,6 +44,18 @@ class JourneyService {
     return snapshot.docs.map((doc) => Journey.fromMap(doc.id, doc.data())).toList();
   }
   Future<List<Destination>> fetchAllDestinations() async {
+    final offlineService = OfflineService();
+    final online = await offlineService.isOnline();
+
+    if (!online) {
+      // Return whatever's cached — better than nothing while offline
+      final cachedIds = Hive.box<String>('offline_destinations').keys;
+      return cachedIds
+          .map((id) => offlineService.getCachedDestination(id as String))
+          .whereType<Destination>()
+          .toList();
+    }
+
     final snapshot = await _firestore.collection('destinations').get();
     return snapshot.docs.map((doc) => Destination.fromMap(doc.id, doc.data())).toList();
   }
