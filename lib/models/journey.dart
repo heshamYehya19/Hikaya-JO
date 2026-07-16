@@ -47,6 +47,16 @@ class Journey {
   final double totalCost;
   final DateTime createdAt;
   factory Journey.fromMap(String id, Map<String, dynamic> map) {
+    DateTime parsedDate;
+    final rawDate = map['createdAt'];
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate(); // handles old Firestore docs saved before this fix
+    } else if (rawDate is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate);
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return Journey(
       id: id,
       stops: (map['stops'] as List)
@@ -54,7 +64,7 @@ class Journey {
           .toList(),
       totalDurationMinutes: map['totalDurationMinutes'] ?? 0,
       totalCost: (map['totalCost'] ?? 0).toDouble(),
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: parsedDate,
     );
   }
 
@@ -62,7 +72,7 @@ class Journey {
     'stops': stops.map((s) => s.toMap()).toList(),
     'totalDurationMinutes': totalDurationMinutes,
     'totalCost': totalCost,
-    'createdAt': Timestamp.fromDate(createdAt),
+    'createdAt': createdAt.millisecondsSinceEpoch,
   };
 
   Journey({
