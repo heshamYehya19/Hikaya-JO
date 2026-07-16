@@ -122,29 +122,49 @@ class ItineraryScreen extends ConsumerWidget {
     );
   }
   Future<void> _downloadForOffline(BuildContext context, WidgetRef ref, Journey journey) async {
-    final journeyService = JourneyService();
-    final storyService = StoryGuideService();
-    final offlineService = OfflineService();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading journey…'), duration: Duration(seconds: 30)),
+    );
 
-    final allDestinations = await journeyService.fetchAllDestinations();
-    final destinationMap = {for (var d in allDestinations) d.id: d};
+    try {
+      final journeyService = JourneyService();
+      final storyService = StoryGuideService();
+      final offlineService = OfflineService();
 
-    final relevantDestinations = journey.stops
-        .map((s) => destinationMap[s.destinationId])
-        .whereType<Destination>()
-        .toList();
+      final allDestinations = await journeyService.fetchAllDestinations();
+      print('OFFLINE DEBUG: fetched ${allDestinations.length} destinations');
 
-    final Map<String, String> stories = {};
-    for (final d in relevantDestinations) {
-      stories[d.id] = await storyService.getStory(d);
-    }
+      final destinationMap = {for (var d in allDestinations) d.id: d};
 
-    await offlineService.cacheJourney(journey: journey, destinations: relevantDestinations, stories: stories);
+      final relevantDestinations = journey.stops
+          .map((s) => destinationMap[s.destinationId])
+          .whereType<Destination>()
+          .toList();
+      print('OFFLINE DEBUG: ${relevantDestinations.length} relevant destinations for this journey');
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Journey downloaded for offline use')),
-      );
+      final Map<String, String> stories = {};
+      for (final d in relevantDestinations) {
+        print('OFFLINE DEBUG: fetching story for ${d.name}');
+        stories[d.id] = await storyService.getStory(d);
+      }
+
+      await offlineService.cacheJourney(journey: journey, destinations: relevantDestinations, stories: stories);
+      print('OFFLINE DEBUG: cached successfully');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Journey downloaded for offline use')),
+        );
+      }
+    } catch (e) {
+      print('OFFLINE DEBUG: error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
     }
   }
 }
