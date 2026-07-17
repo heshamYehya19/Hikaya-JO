@@ -9,6 +9,7 @@ import '../../models/journey.dart';
 import '../../providers/journey_provider.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
+import '../../core/services/offline_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -28,9 +29,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadJourneys() async {
-    final journeys = await JourneyService().fetchUserJourneys();
+    final offlineService = OfflineService();
+    final online = await offlineService.isOnline();
+
+    if (online) {
+      try {
+        final journeys = await JourneyService().fetchUserJourneys();
+        setState(() {
+          _journeys = journeys;
+          _isLoading = false;
+        });
+        return;
+      } catch (_) {
+        // fall through to offline cache below
+      }
+    }
+
+    // Offline, or the online fetch failed — show whatever's downloaded locally
+    final cached = offlineService.getCachedJourneys();
     setState(() {
-      _journeys = journeys;
+      _journeys = cached;
       _isLoading = false;
     });
   }
