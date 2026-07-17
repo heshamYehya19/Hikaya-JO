@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/services/hunt_service.dart';
+import '../../core/services/photo_verification_service.dart';
+import '../../core/services/landmark_verification_service.dart';
 import '../../models/challenge.dart';
 
 class CameraCaptureScreen extends StatefulWidget {
@@ -17,14 +20,17 @@ class CameraCaptureScreen extends StatefulWidget {
 
 class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   final _huntService = HuntService();
+  final _landmarkService = LandmarkVerificationService();
+  final _verificationService = PhotoVerificationService();
   File? _photo;
   bool _isSubmitting = false;
+  bool _isVerifying = false;
   bool _isDone = false;
   String? _error;
 
-  Future<void> _takePhoto() async {
+  Future<void> _takePhoto({ImageSource source = ImageSource.camera}) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final image = await picker.pickImage(source: source, imageQuality: 70);
     if (image != null) {
       setState(() => _photo = File(image.path));
     }
@@ -33,9 +39,65 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   Future<void> _submit() async {
     if (_photo == null) return;
     setState(() {
-      _isSubmitting = true;
+      _isVerifying = true;
       _error = null;
     });
+
+    // Tier 1: Cloud Vision landmark detection — precise and deterministic.
+    // Recognizes the actual landmark and cross-checks its real coordinates
+    // against this challenge's target location.
+    final landmarkResult = await _landmarkService.detectLandmark(
+      photo: _photo!,
+      targetLat: widget.challenge.latitude,
+      targetLng: widget.challenge.longitude,
+    );
+
+    late PhotoVerificationResult verification;
+
+    if (landmarkResult.matched) {
+      // Confidently recognized the right place — no need for the softer
+      // AI check at all.
+      verification = PhotoVerificationResult(plausible: true, reason: '');
+    } else if (landmarkResult.landmarkName != null) {
+      // Vision recognized *a* landmark, but it's not this one.
+      verification = PhotoVerificationResult(
+        plausible: false,
+        reason: 'This looks like ${landmarkResult.landmarkName}, not ${widget.challenge.destinationName}.',
+      );
+    } else {
+      // Tier 2: Vision found nothing recognizable — expected for
+      // lesser-known destinations not in Google's landmark database.
+      // Fall back to the loose Gemini plausibility check.
+      verification = await _verificationService.verifyPhoto(
+        photo: _photo!,
+        challengeTitle: widget.challenge.title,
+        challengeDescription: widget.challenge.description,
+        destinationName: widget.challenge.destinationName,
+      );
+    }
+
+    setState(() => _isVerifying = false);
+
+    if (!verification.plausible && mounted) {
+      final proceedAnyway = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Take another look?'),
+          content: Text(
+            verification.reason.isNotEmpty
+                ? verification.reason
+                : "This photo doesn't look like it matches ${widget.challenge.destinationName}.",
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Retake Photo')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit Anyway')),
+          ],
+        ),
+      );
+      if (proceedAnyway != true) return;
+    }
+
+    setState(() => _isSubmitting = true);
 
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -144,12 +206,23 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                   label: Text(_photo == null ? 'Open Camera' : 'Retake Photo'),
                 ),
               ),
+              if (kDebugMode) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => _takePhoto(source: ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('🧪 DEV: Choose from Gallery (testing only)'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_photo == null || _isSubmitting) ? null : _submit,
-                  child: _isSubmitting
+                  onPressed: (_photo == null || _isSubmitting || _isVerifying) ? null : _submit,
+                  child: (_isSubmitting || _isVerifying)
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                       : const Text('Complete Challenge'),
                 ),
