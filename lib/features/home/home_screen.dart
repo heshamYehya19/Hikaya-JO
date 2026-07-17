@@ -6,6 +6,7 @@ import '../../models/destination.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../widgets/destination_card.dart';
+import '../journey_planner/all_destinations_screen.dart';
 import '../journey_planner/destination_detail_screen.dart';
 import '../journey_planner/itinerary_screen.dart';
 
@@ -65,7 +66,9 @@ class HomeScreen extends ConsumerWidget {
                     children: [
                       Text('Popular Destinations', style: Theme.of(context).textTheme.headlineMedium),
                       TextButton(
-                        onPressed: () => goToTab(1),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AllDestinationsScreen()),
+                        ),
                         child: const Text('View All'),
                       ),
                     ],
