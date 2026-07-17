@@ -38,10 +38,10 @@ class RewardsBadgesScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.monetization_on_outlined, color: AppColors.duneGold, size: 36),
+                        Icon(Icons.monetization_on_outlined, color: AppColors.background, size: 36),
                         const SizedBox(height: 8),
-                        Text('$coins', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                        const Text('Coins Earned', style: TextStyle(color: Colors.white70)),
+                        Text('$coins', style: const TextStyle(color: AppColors.background, fontSize: 32, fontWeight: FontWeight.bold)),
+                        Text('Coins Earned', style: TextStyle(color: AppColors.background.withOpacity(0.7))),
                       ],
                     ),
                   ),

@@ -47,7 +47,7 @@ class _SeedScreenState extends State<SeedScreen> {
               ElevatedButton(
                 onPressed: _isSeeding ? null : _runSeed,
                 child: _isSeeding
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const CircularProgressIndicator(color: AppColors.background)
                     : const Text('Seed Firestore Now'),
               ),
             ],
