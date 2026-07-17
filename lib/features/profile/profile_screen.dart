@@ -100,7 +100,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         backgroundColor: AppColors.deepTeal,
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: AppColors.background, fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 16),

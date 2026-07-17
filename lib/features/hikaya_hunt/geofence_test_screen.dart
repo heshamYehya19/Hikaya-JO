@@ -76,7 +76,7 @@ class _GeofenceTestScreenState extends State<GeofenceTestScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _isChecking ? null : _checkGeofence,
-                child: _isChecking ? const CircularProgressIndicator(color: Colors.white) : const Text('Check My Location'),
+                child: _isChecking ? const CircularProgressIndicator(color: AppColors.background) : const Text('Check My Location'),
               ),
             ],
           ),

@@ -91,7 +91,7 @@ class ItineraryScreen extends ConsumerWidget {
                               CircleAvatar(
                                 radius: 14,
                                 backgroundColor: AppColors.deepTeal,
-                                child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                child: Text('${index + 1}', style: const TextStyle(color: AppColors.background, fontSize: 12, fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),

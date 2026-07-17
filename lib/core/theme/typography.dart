@@ -29,6 +29,6 @@ class AppTypography {
   static const TextStyle button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: Colors.white,
+    color: AppColors.background, // dark text on gold buttons
   );
 }

@@ -63,7 +63,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
   Widget build(BuildContext context) {
     if (_isDone) {
       return Scaffold(
-        backgroundColor: AppColors.deepTeal,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -71,16 +71,23 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.celebration_outlined, size: 72, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: AppColors.deepTeal, // gold
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.celebration_outlined, size: 48, color: AppColors.background),
+                  ),
                   const SizedBox(height: 20),
                   Text('Challenge Complete!',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Colors.white)),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: AppColors.textPrimary)),
                   const SizedBox(height: 8),
                   if (_error == null)
                     Text('+${widget.challenge.rewardCoins} coins · "${widget.challenge.badgeName}" badge earned',
-                        style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center)
+                        style: const TextStyle(color: AppColors.textSecondary), textAlign: TextAlign.center)
                   else
-                    Text(_error!, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+                    Text(_error!, style: const TextStyle(color: AppColors.textSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst == false && route.settings.name != '/camera'),
@@ -143,7 +150,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 child: ElevatedButton(
                   onPressed: (_photo == null || _isSubmitting) ? null : _submit,
                   child: _isSubmitting
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                       : const Text('Complete Challenge'),
                 ),
               ),
