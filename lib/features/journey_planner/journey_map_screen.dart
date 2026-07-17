@@ -17,6 +17,30 @@ class JourneyMapScreen extends StatefulWidget {
 }
 
 class _JourneyMapScreenState extends State<JourneyMapScreen> {
+  // Minimalist dark theme for Google Maps so the map matches the app's
+  // dark/gold look instead of Google's default light tiles. Set via the
+  // widget's `style` param (GoogleMapController.setMapStyle is deprecated
+  // as of google_maps_flutter 2.6+).
+  static const String _darkMapStyle = '''
+[
+  {"elementType": "geometry", "stylers": [{"color": "#17171a"}]},
+  {"elementType": "labels.text.stroke", "stylers": [{"color": "#0d0d0f"}]},
+  {"elementType": "labels.text.fill", "stylers": [{"color": "#a3a0a0"}]},
+  {"featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#2e2e33"}]},
+  {"featureType": "poi", "elementType": "geometry", "stylers": [{"color": "#1f1f23"}]},
+  {"featureType": "poi", "elementType": "labels.text.fill", "stylers": [{"color": "#a3a0a0"}]},
+  {"featureType": "poi.park", "elementType": "geometry", "stylers": [{"color": "#1a2620"}]},
+  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#2a2a2e"}]},
+  {"featureType": "road", "elementType": "geometry.stroke", "stylers": [{"color": "#17171a"}]},
+  {"featureType": "road", "elementType": "labels.text.fill", "stylers": [{"color": "#8a8785"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#3a3530"}]},
+  {"featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{"color": "#d4a857"}]},
+  {"featureType": "transit", "elementType": "geometry", "stylers": [{"color": "#1f1f23"}]},
+  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0a1a1a"}]},
+  {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#4cc9b0"}]}
+]
+''';
+
   GoogleMapController? _mapController;
   final LocationService _locationService = LocationService();
   final DirectionsService _directionsService = DirectionsService();
@@ -56,11 +80,6 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
     _buildMarkers();
 
     setState(() => _isLoading = false);
-
-    if (widget.journey.stops.isNotEmpty) {
-      final first = widget.journey.stops.first;
-      _selectStop(first.destinationId, first.destinationName, animateCamera: false);
-    }
   }
 
   void _buildMarkers() {
@@ -124,7 +143,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
           Polyline(
             polylineId: const PolylineId('user_to_selected'),
             points: result.routePoints,
-            color: AppColors.teal,
+            color: AppColors.deepTeal,
             width: 4,
           ),
         );
@@ -185,13 +204,17 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final journey = widget.journey;
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Journey Map')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Stack(
         children: [
           GoogleMap(
+            style: _darkMapStyle,
             initialCameraPosition: const CameraPosition(
               target: LatLng(31.9, 35.9),
               zoom: 7,
@@ -215,8 +238,9 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.duneLight),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2)),
+                    BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2)),
                   ],
                 ),
                 child: Row(
@@ -244,6 +268,47 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                 ),
               ),
             ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.duneLight),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Your Journey',
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${journey.stops.length} Stops · ${(journey.totalDurationMinutes / 60).toStringAsFixed(1)} Hours · ${journey.totalCost.toStringAsFixed(0)} JOD',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: journey.stops.isEmpty
+                          ? null
+                          : () {
+                              final first = journey.stops.first;
+                              _selectStop(first.destinationId, first.destinationName);
+                            },
+                      child: const Text('Start Journey'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
