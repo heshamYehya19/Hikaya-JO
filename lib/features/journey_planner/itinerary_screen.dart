@@ -27,6 +27,14 @@ class ItineraryScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Based on your preferences',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              ),
+            ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),

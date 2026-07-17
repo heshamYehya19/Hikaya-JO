@@ -19,6 +19,64 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
   double _hours = 6;
   bool _isGenerating = false;
 
+  IconData _iconForInterest(String interest) {
+    switch (interest) {
+      case 'History':
+        return Icons.account_balance_outlined;
+      case 'Nature':
+        return Icons.terrain_outlined;
+      case 'Adventure':
+        return Icons.hiking_outlined;
+      case 'Culture':
+        return Icons.temple_buddhist_outlined;
+      case 'Food':
+        return Icons.restaurant_outlined;
+      case 'Relaxation':
+        return Icons.spa_outlined;
+      default:
+        return Icons.explore_outlined;
+    }
+  }
+
+  IconData _iconForTransport(String mode) {
+    switch (mode) {
+      case 'car':
+        return Icons.directions_car_outlined;
+      case 'public':
+        return Icons.directions_bus_outlined;
+      case 'walking':
+        return Icons.directions_walk_outlined;
+      default:
+        return Icons.commute_outlined;
+    }
+  }
+
+  String _labelForTransport(String mode) {
+    switch (mode) {
+      case 'car':
+        return 'Car';
+      case 'public':
+        return 'Bus';
+      case 'walking':
+        return 'Walking';
+      default:
+        return mode;
+    }
+  }
+
+  String _symbolForBudget(String level) {
+    switch (level) {
+      case 'low':
+        return '\$';
+      case 'medium':
+        return '\$\$';
+      case 'high':
+        return '\$\$\$';
+      default:
+        return '';
+    }
+  }
+
   Future<void> _generate() async {
     if (_selectedInterests.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -60,50 +118,99 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text('Craft your perfect adventure',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 24),
               Text('What are you interested in?', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.0,
                 children: _allInterests.map((interest) {
                   final selected = _selectedInterests.contains(interest);
-                  return FilterChip(
-                    label: Text(interest),
+                  return _SelectableTile(
+                    icon: _iconForInterest(interest),
+                    label: interest,
                     selected: selected,
-                    onSelected: (val) => setState(() {
-                      val ? _selectedInterests.add(interest) : _selectedInterests.remove(interest);
+                    onTap: () => setState(() {
+                      selected ? _selectedInterests.remove(interest) : _selectedInterests.add(interest);
                     }),
-                    selectedColor: AppColors.deepTeal.withOpacity(0.15),
-                    checkmarkColor: AppColors.deepTeal,
                   );
                 }).toList(),
               ),
               const SizedBox(height: 28),
-              Text('Budget level', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Text('Budget', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'low', label: Text('Low')),
-                  ButtonSegment(value: 'medium', label: Text('Medium')),
-                  ButtonSegment(value: 'high', label: Text('High')),
-                ],
-                selected: {_budget},
-                onSelectionChanged: (val) => setState(() => _budget = val.first),
+              Row(
+                children: ['low', 'medium', 'high'].map((level) {
+                  final selected = _budget == level;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: level != 'high' ? 10 : 0),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _budget = level),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.deepTeal.withOpacity(0.15) : AppColors.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: selected ? AppColors.deepTeal : AppColors.duneLight),
+                          ),
+                          child: Center(
+                            child: Text(
+                              _symbolForBudget(level),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: selected ? AppColors.deepTeal : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 28),
-              Text('Transport mode', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Text('Transport', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'car', label: Text('Car')),
-                  ButtonSegment(value: 'public', label: Text('Public')),
-                  ButtonSegment(value: 'walking', label: Text('Walking')),
-                ],
-                selected: {_transport},
-                onSelectionChanged: (val) => setState(() => _transport = val.first),
+              Row(
+                children: ['walking', 'car', 'public'].map((mode) {
+                  final selected = _transport == mode;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: mode != 'public' ? 10 : 0),
+                      child: _SelectableTile(
+                        icon: _iconForTransport(mode),
+                        label: _labelForTransport(mode),
+                        selected: selected,
+                        onTap: () => setState(() => _transport = mode),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 28),
-              Text('Available time: ${_hours.round()} hours', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('How many hours?', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.deepTeal.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('${_hours.round()} Hours',
+                        style: const TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ],
+              ),
               Slider(
                 value: _hours,
                 min: 2,
@@ -124,6 +231,51 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectableTile extends StatelessWidget {
+  const _SelectableTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.deepTeal.withOpacity(0.15) : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? AppColors.deepTeal : AppColors.duneLight),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: selected ? AppColors.deepTeal : AppColors.textSecondary, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: selected ? AppColors.deepTeal : AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );
