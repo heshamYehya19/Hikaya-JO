@@ -79,7 +79,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                   child: ElevatedButton(
                     onPressed: _isRedeeming ? null : _redeem,
                     child: _isRedeeming
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                         : const Text('Redeem with Coins'),
                   ),
                 ),

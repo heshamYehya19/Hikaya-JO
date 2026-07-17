@@ -118,7 +118,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
                 child: ElevatedButton(
                   onPressed: _isGenerating ? null : _generate,
                   child: _isGenerating
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                       : const Text('Generate My Journey'),
                 ),
               ),

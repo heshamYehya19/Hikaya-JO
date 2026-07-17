@@ -101,7 +101,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                 child: ElevatedButton(
                   onPressed: _isChecking ? null : _checkLocation,
                   child: _isChecking
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                       : const Text('Check My Location'),
                 ),
               ),
