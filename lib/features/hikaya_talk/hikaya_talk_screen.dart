@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/theme/colors.dart';
 import '../../providers/translation_provider.dart';
-
-enum TalkDirection { touristToLocal, localToTourist }
+import '../../models/talk_language.dart';
+import '../../widgets/language_picker.dart';
 
 class HikayaTalkScreen extends ConsumerStatefulWidget {
   const HikayaTalkScreen({super.key});
@@ -19,7 +21,8 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
   final FlutterTts _tts = FlutterTts();
   int _requestId = 0;
 
-  TalkDirection _direction = TalkDirection.touristToLocal;
+  TalkLanguage _myLanguage = kTalkLanguages[0]; // English, until the saved default loads
+  TalkLanguage _theirLanguage = kTalkLanguages[1]; // Arabic
   bool _speechAvailable = false;
   bool _isListening = false;
   bool _isTranslating = false;
@@ -31,6 +34,29 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
   void initState() {
     super.initState();
     _initSpeech();
+    _loadSavedLanguages();
+  }
+
+  /// Loads the default "I Speak" / "They Speak" languages saved from the
+  /// Profile screen, if the user has set one. One-time read (not a stream)
+  /// since this is just an initial value — changing languages here doesn't
+  /// need to live-sync back to Profile.
+  Future<void> _loadSavedLanguages() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final data = doc.data();
+      if (data == null || !mounted) return;
+
+      setState(() {
+        _myLanguage = talkLanguageFromCode(data['myLanguage'] as String?, fallback: _myLanguage);
+        _theirLanguage = talkLanguageFromCode(data['theirLanguage'] as String?, fallback: _theirLanguage);
+      });
+    } catch (_) {
+      // No saved preference yet, or offline — the English/Arabic defaults are fine.
+    }
   }
 
   Future<void> _initSpeech() async {
@@ -44,18 +70,6 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
     );
     setState(() {});
   }
-
-  // Locale for speech recognition input
-  String get _inputLocale =>
-      _direction == TalkDirection.touristToLocal ? 'en-US' : 'ar-JO';
-
-  // Target language name for the Gemini translation prompt
-  String get _targetLanguage =>
-      _direction == TalkDirection.touristToLocal ? 'ar' : 'en';
-
-  // TTS output language
-  String get _outputLocale =>
-      _direction == TalkDirection.touristToLocal ? 'ar-SA' : 'en-US';
 
   Future<void> _startListening() async {
     if (!_speechAvailable) {
@@ -71,15 +85,8 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
       _isListening = true;
     });
 
-
-    setState(() {
-      _recognizedText = '';
-      _translatedText = '';
-      _isListening = true;
-    });
-
     await _speech.listen(
-      localeId: _inputLocale,
+      localeId: _myLanguage.speechLocale,
       onResult: (result) async {
         setState(() => _recognizedText = result.recognizedWords);
         if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
@@ -103,7 +110,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
     try {
       final translated = await ref.read(translationServiceProvider).translate(
         text: text,
-        targetLanguage: _targetLanguage,
+        targetLanguage: _theirLanguage.translateCode,
       );
 
       // Only apply this result if no newer request has started since
@@ -114,7 +121,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
         _isTranslating = false;
       });
 
-      await _tts.setLanguage(_outputLocale);
+      await _tts.setLanguage(_theirLanguage.ttsLocale);
       await _tts.speak(translated);
     } catch (e) {
       if (thisRequestId != _requestId) return; // ignore stale errors too
@@ -130,11 +137,11 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
     }
   }
 
-  void _swapDirection() {
+  void _swapLanguages() {
     setState(() {
-      _direction = _direction == TalkDirection.touristToLocal
-          ? TalkDirection.localToTourist
-          : TalkDirection.touristToLocal;
+      final temp = _myLanguage;
+      _myLanguage = _theirLanguage;
+      _theirLanguage = temp;
       _recognizedText = '';
       _translatedText = '';
     });
@@ -149,8 +156,6 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTouristSpeaking = _direction == TalkDirection.touristToLocal;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Hikaya Talk')),
@@ -159,42 +164,42 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Direction toggle
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: AppColors.duneLight),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: isTouristSpeaking ? null : _swapDirection,
-                        child: _DirectionChip(
-                          label: '🇬🇧 → 🇯🇴',
-                          selected: isTouristSpeaking,
-                        ),
-                      ),
+              // Language selectors: "I Speak" / "They Speak"
+              Row(
+                children: [
+                  Expanded(
+                    child: LanguagePicker(
+                      label: 'I Speak',
+                      language: _myLanguage,
+                      onChanged: (lang) => setState(() {
+                        _myLanguage = lang;
+                        _recognizedText = '';
+                        _translatedText = '';
+                      }),
                     ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: !isTouristSpeaking ? null : _swapDirection,
-                        child: _DirectionChip(
-                          label: '🇯🇴 → 🇬🇧',
-                          selected: !isTouristSpeaking,
-                        ),
-                      ),
+                  ),
+                  IconButton(
+                    onPressed: _swapLanguages,
+                    icon: const Icon(Icons.swap_horiz, color: AppColors.deepTeal),
+                  ),
+                  Expanded(
+                    child: LanguagePicker(
+                      label: 'They Speak',
+                      language: _theirLanguage,
+                      onChanged: (lang) => setState(() {
+                        _theirLanguage = lang;
+                        _recognizedText = '';
+                        _translatedText = '';
+                      }),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
 
               // Recognized text card
               _TranscriptCard(
-                label: isTouristSpeaking ? 'You said (English)' : 'You said (Arabic)',
+                label: 'You said (${_myLanguage.name})',
                 text: _recognizedText.isEmpty ? 'Tap the mic and start speaking…' : _recognizedText,
                 isPlaceholder: _recognizedText.isEmpty,
               ),
@@ -202,7 +207,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
               // Translated text card
               _TranscriptCard(
-                label: isTouristSpeaking ? 'Translated (Arabic)' : 'Translated (English)',
+                label: 'Translated (${_theirLanguage.name})',
                 text: _isTranslating
                     ? 'Translating…'
                     : (_translatedText.isEmpty ? 'Translation will appear here' : _translatedText),
@@ -231,7 +236,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
                   ),
                   child: Icon(
                     _isListening ? Icons.stop : Icons.mic,
-                    color: Colors.white,
+                    color: AppColors.background,
                     size: 36,
                   ),
                 ),
@@ -244,33 +249,6 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
               const SizedBox(height: 8),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DirectionChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-
-  const _DirectionChip({required this.label, required this.selected});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.deepTeal : Colors.transparent,
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: selected ? Colors.white : AppColors.textSecondary,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'core/router/go_router.dart';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/services/offline_service.dart';
+import 'core/services/app_prefs_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,7 @@ void main() async {
   await Firebase.initializeApp();
   await Hive.initFlutter();
   await OfflineService.init();
+  await AppPrefsService.init();
   runApp(const ProviderScope(child: HikayaJoApp()));
 }
 

@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/journey.dart';
+import '../../models/talk_language.dart';
 import '../../providers/journey_provider.dart';
+import '../../widgets/language_picker.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
 import '../../core/services/offline_service.dart';
@@ -86,6 +88,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final badges = List<String>.from(data['badges'] ?? []);
           final visited = List<String>.from(data['visitedLocations'] ?? []);
           final name = data['name'] ?? user?.email ?? 'Traveler';
+          final myLanguage = talkLanguageFromCode(data['myLanguage'] as String?);
+          final theirLanguage = talkLanguageFromCode(data['theirLanguage'] as String?, fallback: kTalkLanguages[1]);
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -135,6 +139,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: const Icon(Icons.emoji_events_outlined),
                       label: const Text('View All Badges'),
                     ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text('Talk Languages', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text('Default for Hikaya Talk', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LanguagePicker(
+                          label: 'I Speak',
+                          language: myLanguage,
+                          onChanged: (lang) => FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .update({'myLanguage': lang.translateCode}),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: LanguagePicker(
+                          label: 'They Speak',
+                          language: theirLanguage,
+                          onChanged: (lang) => FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .update({'theirLanguage': lang.translateCode}),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   Text('Your Journeys', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),

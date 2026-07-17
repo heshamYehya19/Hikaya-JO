@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
+import '../../core/services/app_prefs_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,6 +17,14 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
+
+      // First launch ever (no language picked yet) — that comes before
+      // anything else, even for a returning logged-in user on a fresh install.
+      if (!AppPrefsService().hasPickedLanguage) {
+        context.goNamed('languageSelect');
+        return;
+      }
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         context.goNamed('home'); // already signed in — skip straight in, works offline

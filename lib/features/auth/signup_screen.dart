@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/services/app_prefs_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 
@@ -40,18 +41,20 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
     try {
       final credential = await ref.read(authServiceProvider).signUp(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
       // Create the user's Firestore profile doc
+      final prefs = AppPrefsService();
       await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'interests': [],
         'budgetLevel': null,
         'transportMode': null,
-        'language': 'en',
+        'myLanguage': prefs.myLanguageCode ?? 'en',
+        'theirLanguage': prefs.theirLanguageCode ?? 'ar',
         'coins': 0,
         'badges': [],
         'visitedLocations': [],
@@ -125,10 +128,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     onPressed: _isLoading ? null : _handleSignUp,
                     child: _isLoading
                         ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
                         : const Text('Sign Up'),
                   ),
                 ),
