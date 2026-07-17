@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
+import '../../providers/main_tab_provider.dart';
 import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
 import '../hikaya_hunt/challenge_list_screen.dart';
@@ -7,15 +9,10 @@ import '../hikaya_talk/hikaya_talk_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../widgets/offline_banner.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key});
-  @override
-  State<MainShell> createState() => _MainShellState();
-}
 
-class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
-  final _screens = const [
+  static const _screens = [
     HomeScreen(),
     JourneyPlannerInputScreen(),
     ChallengeListScreen(),
@@ -24,17 +21,19 @@ class _MainShellState extends State<MainShell> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(mainTabIndexProvider);
+
     return Scaffold(
       body: Column(
         children: [
           const OfflineBanner(),
-          Expanded(child: IndexedStack(index: _currentIndex, children: _screens)),
+          Expanded(child: IndexedStack(index: currentIndex, children: _screens)),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        currentIndex: currentIndex,
+        onTap: (index) => ref.read(mainTabIndexProvider.notifier).state = index,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.deepTeal,
         unselectedItemColor: AppColors.textSecondary,
