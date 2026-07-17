@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
+import '../../models/destination.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../widgets/destination_card.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
     final greetingName = user?.email?.split('@').first ?? 'there';
     final destinationsAsync = ref.watch(allDestinationsProvider);
     final latestJourneyAsync = ref.watch(latestJourneyProvider);
+    final featuredAsync = ref.watch(featuredDestinationProvider);
 
     void goToTab(int index) => ref.read(mainTabIndexProvider.notifier).state = index;
 
@@ -28,6 +30,7 @@ class HomeScreen extends ConsumerWidget {
           children: [
             _HeroHeader(
               greetingName: greetingName,
+              featured: featuredAsync.valueOrNull,
               onPlanJourney: () => goToTab(1),
               onHunt: () => goToTab(2),
               onTalk: () => goToTab(3),
@@ -113,75 +116,95 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Full-bleed header: greeting + headline over a gradient, with the three
-/// quick-action buttons from the reference design.
-///
-/// NOTE: there's no destination photo behind this yet — your project only
-/// has assets/images/logo.png right now. This uses a gradient so it renders
-/// correctly today. To get the exact reference look (a Petra photo behind
-/// the greeting), drop an image at assets/images/home_hero.jpg, add it to
-/// pubspec.yaml's assets list, and swap the `decoration:` below for a
-/// DecorationImage — flagged with a TODO at that spot.
+/// Full-bleed header: greeting + headline over the featured destination's
+/// photo (fetched from Firestore via featuredDestinationProvider — see
+/// journey_provider.dart). Falls back to a plain gradient if that
+/// destination doesn't have an imageUrls entry yet, so this never breaks
+/// before you've uploaded photos.
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({
     required this.greetingName,
+    required this.featured,
     required this.onPlanJourney,
     required this.onHunt,
     required this.onTalk,
   });
 
   final String greetingName;
+  final Destination? featured;
   final VoidCallback onPlanJourney;
   final VoidCallback onHunt;
   final VoidCallback onTalk;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-      // TODO: swap for DecorationImage(image: AssetImage('assets/images/home_hero.jpg'), fit: BoxFit.cover)
-      // once you add a real hero photo — keep the gradient as an overlay on top of it either way.
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.surfaceElevated, AppColors.background],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Good Morning, $greetingName',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-          const SizedBox(height: 6),
-          const Text(
-            "Discover Jordan's Hidden Stories",
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
+    final hasImage = featured != null && featured!.imageUrls.isNotEmpty;
+
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        if (hasImage)
+          Positioned.fill(
+            child: Image.network(
+              featured!.imageUrls.first,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          decoration: BoxDecoration(
+            gradient: hasImage
+                ? LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.background.withOpacity(0.3),
+                      AppColors.background.withOpacity(0.95),
+                    ],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.surfaceElevated, AppColors.background],
+                  ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _QuickAction(icon: Icons.map_outlined, label: 'Plan a Journey', onTap: onPlanJourney),
+              Text('Good Morning, $greetingName',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 6),
+              const Text(
+                "Discover Jordan's Hidden Stories",
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickAction(icon: Icons.emoji_events_outlined, label: 'Hikaya Hunt', onTap: onHunt),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickAction(icon: Icons.chat_bubble_outline, label: 'Hikaya Talk', onTap: onTalk),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickAction(icon: Icons.map_outlined, label: 'Plan a Journey', onTap: onPlanJourney),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAction(icon: Icons.emoji_events_outlined, label: 'Hikaya Hunt', onTap: onHunt),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAction(icon: Icons.chat_bubble_outline, label: 'Hikaya Talk', onTap: onTalk),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
