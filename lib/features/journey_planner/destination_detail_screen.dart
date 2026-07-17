@@ -81,6 +81,39 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
     }
   }
 
+  Widget _buildHeaderImage() {
+    final hasImage = _destination!.imageUrls.isNotEmpty;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        height: 180,
+        width: double.infinity,
+        child: hasImage
+            ? Image.network(
+                _destination!.imageUrls.first,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: AppColors.deepTeal.withOpacity(0.1),
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (_, __, ___) => _iconFallback(),
+              )
+            : _iconFallback(),
+      ),
+    );
+  }
+
+  Widget _iconFallback() {
+    return Container(
+      color: AppColors.deepTeal.withOpacity(0.1),
+      child: Icon(_iconForType(_destination!.type), size: 56, color: AppColors.deepTeal),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,15 +134,7 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.deepTeal.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(_iconForType(_destination!.type), size: 56, color: AppColors.deepTeal),
-              ),
+              _buildHeaderImage(),
               const SizedBox(height: 20),
               Row(
                 children: [
