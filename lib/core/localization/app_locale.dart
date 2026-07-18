@@ -34,10 +34,11 @@ class AppLocale extends InheritedWidget {
 }
 
 /// Wrap the whole app in this once, at the root (see main.dart). Listens to
-/// the signed-in user's myLanguage field in real time — changing language in
+/// the signed-in user's appLanguage field in real time — changing it in
 /// Profile updates every screen immediately, no restart needed. Before
 /// login, falls back to whatever was picked on the first-launch language
-/// screen (stored locally via AppPrefsService).
+/// screen (stored locally via AppPrefsService). This is intentionally
+/// separate from Hikaya Talk's myLanguage/theirLanguage — see AppPrefsService.
 class AppLocaleScope extends StatefulWidget {
   final Widget child;
   const AppLocaleScope({super.key, required this.child});
@@ -59,7 +60,7 @@ class _AppLocaleScopeState extends State<AppLocaleScope> {
   }
 
   void _loadLocalFallback() {
-    final code = AppPrefsService().myLanguageCode;
+    final code = AppPrefsService().appLanguageCode;
     if (code != null && mounted) {
       setState(() => _locale = code == 'ar' ? 'ar' : 'en');
     }
@@ -72,7 +73,7 @@ class _AppLocaleScopeState extends State<AppLocaleScope> {
       return;
     }
     _userDocSub = FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots().listen((doc) {
-      final lang = doc.data()?['myLanguage'] as String?;
+      final lang = doc.data()?['appLanguage'] as String?;
       if (lang != null && mounted) {
         setState(() => _locale = lang == 'ar' ? 'ar' : 'en');
       }

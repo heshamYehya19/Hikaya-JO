@@ -15,7 +15,14 @@ class JourneyService {
   JourneyService() {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     final modelName = dotenv.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash-lite';
-    _model = GenerativeModel(model: modelName, apiKey: apiKey);
+    _model = GenerativeModel(
+      model: modelName,
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+        maxOutputTokens: 2048,
+      ),
+    );
   }
 
   Future<void> saveJourney(Journey journey) async {
@@ -48,7 +55,6 @@ class JourneyService {
     final online = await offlineService.isOnline();
 
     if (!online) {
-      // Return whatever's cached — better than nothing while offline
       final cachedIds = Hive.box<String>('offline_destinations').keys;
       return cachedIds
           .map((id) => offlineService.getCachedDestination(id as String))
@@ -61,14 +67,13 @@ class JourneyService {
   }
 
   Future<Journey> generateJourney({
+    required List<Destination> destinations,
     required List<String> interests,
     required String budgetLevel,
     required int availableHours,
     required String transportMode,
     int maxRetries = 3,
   }) async {
-    final destinations = await fetchAllDestinations();
-
     if (destinations.isEmpty) {
       throw Exception('No destinations found — did you run the /seed screen?');
     }
@@ -78,7 +83,6 @@ class JourneyService {
       'id': d.id,
       'name': d.name,
       'type': d.type,
-      'description': d.description,
       'avgVisitMinutes': d.avgVisitMinutes,
       'costLevel': d.costLevel,
     })
@@ -120,19 +124,15 @@ IMPORTANT: The user has $availableHours hours total (${availableHours * 60} minu
       try {
         final response = await _model.generateContent([Content.text(prompt)]);
         final rawText = response.text?.trim() ?? '{}';
-        print('DEBUG journey raw response: $rawText'); // temporary — remove once confirmed working
 
-        final cleaned = rawText.replaceAll(RegExp(r'```json|```'), '').trim();
-        final parsed = jsonDecode(cleaned) as Map<String, dynamic>;
+        final parsed = jsonDecode(rawText) as Map<String, dynamic>;
 
         final stops = (parsed['stops'] as List)
             .map((s) => JourneyStop.fromMap(s as Map<String, dynamic>))
             .toList();
 
-// Don't trust Gemini's self-reported totals — compute them ourselves
-// from the actual stops it returned, so the numbers are always internally consistent.
         final visitMinutes = stops.fold<int>(0, (sum, stop) => sum + stop.durationMinutes);
-        final estimatedTravelMinutes = stops.length > 1 ? (stops.length - 1) * 30 : 0; // rough 30min buffer between stops
+        final estimatedTravelMinutes = stops.length > 1 ? (stops.length - 1) * 30 : 0;
         final computedTotalDuration = visitMinutes + estimatedTravelMinutes;
         final computedTotalCost = stops.fold<double>(0, (sum, stop) => sum + stop.estimatedCost);
 
@@ -145,7 +145,6 @@ IMPORTANT: The user has $availableHours hours total (${availableHours * 60} minu
         );
       } catch (e) {
         attempt++;
-        print('DEBUG journey generation attempt $attempt failed: $e');
         final isRetryable = e.toString().contains('503') || e.toString().contains('UNAVAILABLE');
         if (!isRetryable || attempt >= maxRetries) rethrow;
         await Future.delayed(Duration(milliseconds: 500 * attempt));

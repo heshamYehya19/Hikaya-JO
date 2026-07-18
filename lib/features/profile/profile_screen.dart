@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/localization/app_locale.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/journey.dart';
 import '../../models/talk_language.dart';
@@ -67,19 +68,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(t('profile_title')),
         actions: [
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
       body: userId == null
-          ? const Center(child: Text('Not logged in'))
+          ? Center(child: Text(t('profile_not_logged_in')))
           : StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
         builder: (context, snapshot) {
@@ -90,6 +92,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final name = data['name'] ?? user?.email ?? 'Traveler';
           final myLanguage = talkLanguageFromCode(data['myLanguage'] as String?);
           final theirLanguage = talkLanguageFromCode(data['theirLanguage'] as String?, fallback: kTalkLanguages[1]);
+          final appLanguage = (data['appLanguage'] as String?) ?? 'en';
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -122,11 +125,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      Expanded(child: _StatCard(value: '$coins', label: 'Coins', icon: Icons.monetization_on_outlined)),
+                      Expanded(child: _StatCard(value: '$coins', label: t('profile_coins'), icon: Icons.monetization_on_outlined)),
                       const SizedBox(width: 12),
-                      Expanded(child: _StatCard(value: '${badges.length}', label: 'Badges', icon: Icons.emoji_events_outlined)),
+                      Expanded(child: _StatCard(value: '${badges.length}', label: t('profile_badges'), icon: Icons.emoji_events_outlined)),
                       const SizedBox(width: 12),
-                      Expanded(child: _StatCard(value: '${visited.length}', label: 'Visited', icon: Icons.place_outlined)),
+                      Expanded(child: _StatCard(value: '${visited.length}', label: t('profile_visited'), icon: Icons.place_outlined)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -137,19 +140,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         MaterialPageRoute(builder: (_) => const RewardsBadgesScreen()),
                       ),
                       icon: const Icon(Icons.emoji_events_outlined),
-                      label: const Text('View All Badges'),
+                      label: Text(t('profile_view_all_badges')),
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Text('Talk Languages', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  Text(t('profile_app_language'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
                   const SizedBox(height: 4),
-                  Text('Default for Hikaya Talk', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  Text(t('profile_app_language_subtitle'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AppLanguageOption(
+                          label: 'English',
+                          selected: appLanguage == 'en',
+                          onTap: () => FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .update({'appLanguage': 'en'}),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AppLanguageOption(
+                          label: 'العربية',
+                          selected: appLanguage == 'ar',
+                          onTap: () => FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .update({'appLanguage': 'ar'}),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Text(t('profile_talk_languages'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text(t('profile_talk_languages_subtitle'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
                         child: LanguagePicker(
-                          label: 'I Speak',
+                          label: t('profile_i_speak'),
                           language: myLanguage,
                           onChanged: (lang) => FirebaseFirestore.instance
                               .collection('users')
@@ -160,7 +193,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: LanguagePicker(
-                          label: 'They Speak',
+                          label: t('profile_they_speak'),
                           language: theirLanguage,
                           onChanged: (lang) => FirebaseFirestore.instance
                               .collection('users')
@@ -171,14 +204,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 28),
-                  Text('Your Journeys', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  Text(t('profile_your_journeys'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
                   const SizedBox(height: 12),
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _journeys.isEmpty
                       ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text('No journeys yet — plan your first one!',
+                    child: Text(t('profile_no_journeys'),
                         style: TextStyle(color: AppColors.textSecondary)),
                   )
                       : Column(
@@ -202,7 +235,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('${journey.stops.length} stops · ${(journey.totalDurationMinutes / 60).toStringAsFixed(1)}h',
+                                      Text('${journey.stops.length} ${t('unit_stops')} · ${(journey.totalDurationMinutes / 60).toStringAsFixed(1)}${t('unit_hours')[0]}',
                                           style: const TextStyle(fontWeight: FontWeight.w600)),
                                       Text(
                                         journey.stops.map((s) => s.destinationName).join(', '),
@@ -226,6 +259,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _AppLanguageOption extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _AppLanguageOption({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.deepTeal.withOpacity(0.15) : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? AppColors.deepTeal : AppColors.duneLight),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: selected ? AppColors.deepTeal : AppColors.textPrimary,
+            ),
+          ),
+        ),
       ),
     );
   }

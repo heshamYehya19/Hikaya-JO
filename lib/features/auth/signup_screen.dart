@@ -46,6 +46,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       );
 
       // Create the user's Firestore profile doc
+      // Create the user's Firestore profile doc
       final prefs = AppPrefsService();
       await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
         'name': _nameController.text.trim(),
@@ -55,6 +56,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         'transportMode': null,
         'myLanguage': prefs.myLanguageCode ?? 'en',
         'theirLanguage': prefs.theirLanguageCode ?? 'ar',
+        'appLanguage': prefs.appLanguageCode ?? 'en',
         'coins': 0,
         'badges': [],
         'visitedLocations': [],

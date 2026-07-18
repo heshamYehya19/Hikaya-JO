@@ -25,11 +25,19 @@ class _LanguageSelectScreenState extends State<LanguageSelectScreen> {
     // themselves, who get English as the counterpart instead.
     final theirLanguage = language.translateCode == 'ar' ? kTalkLanguages[0] : kTalkLanguages[1];
 
+    // App UI language starts as a sensible guess from this choice (Arabic
+    // speaker → Arabic UI, everyone else → English UI, since those are the
+    // only two supported), but from here it's a fully separate setting —
+    // changing it later in Profile never touches myLanguage/theirLanguage,
+    // and vice versa.
+    final initialAppLanguage = language.translateCode == 'ar' ? 'ar' : 'en';
+
     final prefs = AppPrefsService();
     await prefs.setLanguages(
       myLanguageCode: language.translateCode,
       theirLanguageCode: theirLanguage.translateCode,
     );
+    await prefs.setAppLanguage(initialAppLanguage);
 
     // If a session already exists (e.g. reinstall on a device that was
     // never asked before, but Firebase Auth restored the login), sync
@@ -40,6 +48,7 @@ class _LanguageSelectScreenState extends State<LanguageSelectScreen> {
         await FirebaseFirestore.instance.collection('users').doc(userId).update({
           'myLanguage': language.translateCode,
           'theirLanguage': theirLanguage.translateCode,
+          'appLanguage': initialAppLanguage,
         });
       } catch (_) {
         // Doc might not exist yet, or offline — signup/profile will set it later regardless.

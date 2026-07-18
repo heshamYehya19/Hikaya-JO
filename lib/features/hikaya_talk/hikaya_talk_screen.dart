@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/theme/colors.dart';
+import '../../core/localization/app_locale.dart';
 import '../../providers/translation_provider.dart';
 import '../../models/talk_language.dart';
 import '../../widgets/language_picker.dart';
@@ -128,7 +129,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
       setState(() {
         if (e.toString().contains('503') || e.toString().contains('UNAVAILABLE')) {
-          _translatedText = 'Translation service is busy — please try again in a moment';
+          _translatedText = AppLocale.of(context).t('talk_service_busy');
         } else {
           _translatedText = 'RAW ERROR: $e';
         }
@@ -156,9 +157,11 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Hikaya Talk')),
+      appBar: AppBar(title: Text(t('talk_title'))),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -169,7 +172,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
                 children: [
                   Expanded(
                     child: LanguagePicker(
-                      label: 'I Speak',
+                      label: t('talk_i_speak'),
                       language: _myLanguage,
                       onChanged: (lang) => setState(() {
                         _myLanguage = lang;
@@ -184,7 +187,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
                   ),
                   Expanded(
                     child: LanguagePicker(
-                      label: 'They Speak',
+                      label: t('talk_they_speak'),
                       language: _theirLanguage,
                       onChanged: (lang) => setState(() {
                         _theirLanguage = lang;
@@ -199,18 +202,18 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
               // Recognized text card
               _TranscriptCard(
-                label: 'You said (${_myLanguage.name})',
-                text: _recognizedText.isEmpty ? 'Tap the mic and start speaking…' : _recognizedText,
+                label: '${t('talk_you_said')} (${_myLanguage.name})',
+                text: _recognizedText.isEmpty ? t('talk_tap_to_speak_hint') : _recognizedText,
                 isPlaceholder: _recognizedText.isEmpty,
               ),
               const SizedBox(height: 16),
 
               // Translated text card
               _TranscriptCard(
-                label: 'Translated (${_theirLanguage.name})',
+                label: '${t('talk_translated')} (${_theirLanguage.name})',
                 text: _isTranslating
-                    ? 'Translating…'
-                    : (_translatedText.isEmpty ? 'Translation will appear here' : _translatedText),
+                    ? t('talk_translating')
+                    : (_translatedText.isEmpty ? t('talk_translation_placeholder') : _translatedText),
                 isPlaceholder: _translatedText.isEmpty && !_isTranslating,
                 accent: true,
               ),
@@ -243,7 +246,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _isListening ? 'Listening…' : 'Tap to speak',
+                _isListening ? t('talk_listening') : t('talk_tap_to_speak'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 8),

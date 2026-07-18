@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
+import '../../core/localization/app_locale.dart';
 import '../../providers/journey_provider.dart';
 import 'itinerary_screen.dart';
 
@@ -12,26 +13,26 @@ class JourneyPlannerInputScreen extends ConsumerStatefulWidget {
 }
 
 class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputScreen> {
-  final List<String> _allInterests = ['History', 'Nature', 'Adventure', 'Culture', 'Food', 'Relaxation'];
+  final List<String> _interestKeys = ['history', 'nature', 'adventure', 'culture', 'food', 'relaxation'];
   final Set<String> _selectedInterests = {};
   String _budget = 'medium';
   String _transport = 'car';
   double _hours = 6;
   bool _isGenerating = false;
 
-  IconData _iconForInterest(String interest) {
-    switch (interest) {
-      case 'History':
+  IconData _iconForInterest(String key) {
+    switch (key) {
+      case 'history':
         return Icons.account_balance_outlined;
-      case 'Nature':
+      case 'nature':
         return Icons.terrain_outlined;
-      case 'Adventure':
+      case 'adventure':
         return Icons.hiking_outlined;
-      case 'Culture':
+      case 'culture':
         return Icons.temple_buddhist_outlined;
-      case 'Food':
+      case 'food':
         return Icons.restaurant_outlined;
-      case 'Relaxation':
+      case 'relaxation':
         return Icons.spa_outlined;
       default:
         return Icons.explore_outlined;
@@ -51,19 +52,6 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
     }
   }
 
-  String _labelForTransport(String mode) {
-    switch (mode) {
-      case 'car':
-        return 'Car';
-      case 'public':
-        return 'Bus';
-      case 'walking':
-        return 'Walking';
-      default:
-        return mode;
-    }
-  }
-
   String _symbolForBudget(String level) {
     switch (level) {
       case 'low':
@@ -78,29 +66,39 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
   }
 
   Future<void> _generate() async {
+    final t = AppLocale.of(context).t;
+
     if (_selectedInterests.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick at least one interest')),
+        SnackBar(content: Text(t('plan_pick_interest_error'))),
       );
       return;
     }
 
     setState(() => _isGenerating = true);
     try {
+      final destinations = await ref.read(allDestinationsProvider.future);
+      final interestsForPrompt = _selectedInterests.map((key) => AppLocale.of(context).t('interest_$key')).toList();
+
       final journey = await ref.read(journeyServiceProvider).generateJourney(
-        interests: _selectedInterests.toList(),
+        destinations: destinations,
+        interests: interestsForPrompt,
         budgetLevel: _budget,
         availableHours: _hours.round(),
         transportMode: _transport,
       );
       ref.read(currentJourneyProvider.notifier).state = journey;
-      await ref.read(journeyServiceProvider).saveJourney(journey); // persist it
+
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
       }
+
+      ref.read(journeyServiceProvider).saveJourney(journey).catchError((e) {
+        debugPrint('Failed to save journey: $e');
+      });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate journey: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${t('plan_generate_error')}: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -109,19 +107,20 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Plan Your Journey')),
+      appBar: AppBar(title: Text(t('plan_title'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Craft your perfect adventure',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              Text(t('plan_subtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
               const SizedBox(height: 24),
-              Text('What are you interested in?', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Text(t('plan_interests_heading'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: 3,
@@ -130,20 +129,20 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.0,
-                children: _allInterests.map((interest) {
-                  final selected = _selectedInterests.contains(interest);
+                children: _interestKeys.map((key) {
+                  final selected = _selectedInterests.contains(key);
                   return _SelectableTile(
-                    icon: _iconForInterest(interest),
-                    label: interest,
+                    icon: _iconForInterest(key),
+                    label: t('interest_$key'),
                     selected: selected,
                     onTap: () => setState(() {
-                      selected ? _selectedInterests.remove(interest) : _selectedInterests.add(interest);
+                      selected ? _selectedInterests.remove(key) : _selectedInterests.add(key);
                     }),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 28),
-              Text('Budget', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Text(t('plan_budget_heading'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
               Row(
                 children: ['low', 'medium', 'high'].map((level) {
@@ -177,17 +176,18 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
                 }).toList(),
               ),
               const SizedBox(height: 28),
-              Text('Transport', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+              Text(t('plan_transport_heading'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
               const SizedBox(height: 12),
               Row(
                 children: ['walking', 'car', 'public'].map((mode) {
                   final selected = _transport == mode;
+                  final label = mode == 'car' ? t('transport_car') : (mode == 'public' ? t('transport_bus') : t('transport_walking'));
                   return Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(right: mode != 'public' ? 10 : 0),
                       child: _SelectableTile(
                         icon: _iconForTransport(mode),
-                        label: _labelForTransport(mode),
+                        label: label,
                         selected: selected,
                         onTap: () => setState(() => _transport = mode),
                       ),
@@ -199,14 +199,14 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('How many hours?', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  Text(t('plan_hours_heading'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.deepTeal.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('${_hours.round()} Hours',
+                    child: Text('${_hours.round()} ${t('unit_hours')}',
                         style: const TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ],
@@ -226,7 +226,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
                   onPressed: _isGenerating ? null : _generate,
                   child: _isGenerating
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
-                      : const Text('Generate My Journey'),
+                      : Text(t('plan_generate_button')),
                 ),
               ),
             ],
@@ -238,12 +238,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
 }
 
 class _SelectableTile extends StatelessWidget {
-  const _SelectableTile({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _SelectableTile({required this.icon, required this.label, required this.selected, required this.onTap});
 
   final IconData icon;
   final String label;
@@ -269,11 +264,7 @@ class _SelectableTile extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: selected ? AppColors.deepTeal : AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: selected ? AppColors.deepTeal : AppColors.textPrimary),
             ),
           ],
         ),
