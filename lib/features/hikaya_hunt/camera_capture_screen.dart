@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/photo_verification_service.dart';
 import '../../core/services/landmark_verification_service.dart';
@@ -44,8 +45,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     });
 
     // Tier 1: Cloud Vision landmark detection — precise and deterministic.
-    // Recognizes the actual landmark and cross-checks its real coordinates
-    // against this challenge's target location.
     final landmarkResult = await _landmarkService.detectLandmark(
       photo: _photo!,
       targetLat: widget.challenge.latitude,
@@ -55,19 +54,14 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     late PhotoVerificationResult verification;
 
     if (landmarkResult.matched) {
-      // Confidently recognized the right place — no need for the softer
-      // AI check at all.
       verification = PhotoVerificationResult(plausible: true, reason: '');
     } else if (landmarkResult.landmarkName != null) {
-      // Vision recognized *a* landmark, but it's not this one.
       verification = PhotoVerificationResult(
         plausible: false,
         reason: 'This looks like ${landmarkResult.landmarkName}, not ${widget.challenge.destinationName}.',
       );
     } else {
-      // Tier 2: Vision found nothing recognizable — expected for
-      // lesser-known destinations not in Google's landmark database.
-      // Fall back to the loose Gemini plausibility check.
+      // Tier 2: fall back to the looser Gemini plausibility check.
       verification = await _verificationService.verifyPhoto(
         photo: _photo!,
         challengeTitle: widget.challenge.title,
@@ -82,11 +76,13 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       final proceedAnyway = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Take another look?'),
+          backgroundColor: AppColors.surface,
+          title: const Text('Take another look?', style: TextStyle(color: AppColors.textPrimary)),
           content: Text(
             verification.reason.isNotEmpty
                 ? verification.reason
                 : "This photo doesn't look like it matches ${widget.challenge.destinationName}.",
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Retake Photo')),
@@ -134,26 +130,59 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: AppColors.deepTeal, // gold
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.celebration_outlined, size: 48, color: AppColors.background),
+                    width: 96,
+                    height: 96,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: AppColors.deepTeal, shape: BoxShape.circle),
+                    child: const Icon(Icons.star_rounded, size: 52, color: AppColors.background),
                   ),
-                  const SizedBox(height: 20),
-                  Text('Challenge Complete!',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: AppColors.textPrimary)),
-                  const SizedBox(height: 8),
-                  if (_error == null)
-                    Text('+${widget.challenge.rewardCoins} coins · "${widget.challenge.badgeName}" badge earned',
-                        style: const TextStyle(color: AppColors.textSecondary), textAlign: TextAlign.center)
-                  else
+                  const SizedBox(height: 24),
+                  Text('Congratulations!', style: AppTypography.headline1.copyWith(fontSize: 26), textAlign: TextAlign.center),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "You unlocked a new story!",
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  if (_error == null) ...[
+                    Text(
+                      '+${widget.challenge.rewardCoins} Coins Earned',
+                      style: const TextStyle(color: AppColors.duneGold, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.duneLight),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.emoji_events, size: 16, color: AppColors.deepTeal),
+                          const SizedBox(width: 8),
+                          Text('"${widget.challenge.badgeName}" badge earned', style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ] else
                     Text(_error!, style: const TextStyle(color: AppColors.textSecondary), textAlign: TextAlign.center),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst == false && route.settings.name != '/camera'),
-                    child: const Text('Back to Hunt'),
+                  const SizedBox(height: 36),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      // Fixed: the old popUntil predicate checked route.settings.name,
+                      // but none of these routes are named, so it silently popped
+                      // all the way to the app's very first screen instead of just
+                      // back to the challenge list. This pops exactly the 2 screens
+                      // pushed to get here (camera + challenge detail).
+                      onPressed: () => Navigator.of(context)
+                        ..pop()
+                        ..pop(),
+                      child: const Text('Great!'),
+                    ),
                   ),
                 ],
               ),
@@ -165,45 +194,74 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Capture the Moment')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text("You're in the right place!", style: AppTypography.headline2.copyWith(fontSize: 20)),
+              const Padding(
+                padding: EdgeInsets.only(top: 4, bottom: 20),
+                child: Text('Take a photo to unlock the story', style: AppTypography.bodySecondary),
+              ),
               Expanded(
                 child: _photo == null
                     ? Container(
+                  width: double.infinity,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: AppColors.duneLight),
                   ),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.camera_alt_outlined, size: 56, color: AppColors.textSecondary),
-                        const SizedBox(height: 12),
-                        Text('No photo yet', style: TextStyle(color: AppColors.textSecondary)),
+                        Container(
+                          width: 72,
+                          height: 72,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(color: AppColors.surfaceElevated, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt_outlined, size: 32, color: AppColors.duneGold),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text('No photo yet', style: TextStyle(color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
                 )
                     : ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: Image.file(_photo!, fit: BoxFit.cover, width: double.infinity),
                 ),
               ),
               const SizedBox(height: 16),
-              if (_error != null) Text(_error!, style: TextStyle(color: AppColors.error)),
-              const SizedBox(height: 8),
+              if (_error != null) Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_error!, style: const TextStyle(color: AppColors.error)),
+              ),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: _takePhoto,
                   icon: const Icon(Icons.camera_alt_outlined),
-                  label: Text(_photo == null ? 'Open Camera' : 'Retake Photo'),
+                  label: Text(_photo == null ? 'Take Photo & Unlock' : 'Retake Photo'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.duneLight),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                  ),
                 ),
               ),
               if (kDebugMode) ...[

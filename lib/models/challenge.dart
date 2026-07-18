@@ -6,6 +6,7 @@ class Challenge {
   final String description;
   final int rewardCoins;
   final String badgeName;
+  final String difficulty; // 'Easy' | 'Medium' | 'Hard'
   final double latitude;
   final double longitude;
   final double radiusMeters;
@@ -20,6 +21,7 @@ class Challenge {
     required this.longitude,
     this.rewardCoins = 15,
     this.badgeName = 'Explorer',
+    this.difficulty = 'Easy',
     this.radiusMeters = 150,
   });
 
@@ -34,6 +36,7 @@ class Challenge {
       longitude: (map['longitude'] as num).toDouble(),
       rewardCoins: map['rewardCoins'] ?? 15,
       badgeName: map['badgeName'] ?? 'Explorer',
+      difficulty: map['difficulty'] ?? 'Easy',
       radiusMeters: (map['radiusMeters'] ?? 150).toDouble(),
     );
   }
@@ -47,6 +50,7 @@ class Challenge {
     'longitude': longitude,
     'rewardCoins': rewardCoins,
     'badgeName': badgeName,
+    'difficulty': difficulty,
     'radiusMeters': radiusMeters,
   };
 }
