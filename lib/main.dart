@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/go_router.dart';
+import 'core/localization/app_locale.dart';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/services/offline_service.dart';
@@ -29,6 +30,7 @@ class HikayaJoApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => AppLocaleScope(child: child!),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
+import '../../core/localization/app_locale.dart';
 import '../../providers/main_tab_provider.dart';
 import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
@@ -23,6 +24,7 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(mainTabIndexProvider);
+    final t = AppLocale.of(context).t;
 
     return Scaffold(
       body: Column(
@@ -37,12 +39,12 @@ class MainShell extends ConsumerWidget {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.deepTeal,
         unselectedItemColor: AppColors.textSecondary,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Journey'),
-          BottomNavigationBarItem(icon: Icon(Icons.emoji_events_outlined), label: 'Hunt'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Talk'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.home_outlined), label: t('nav_home')),
+          BottomNavigationBarItem(icon: const Icon(Icons.map_outlined), label: t('nav_journey')),
+          BottomNavigationBarItem(icon: const Icon(Icons.emoji_events_outlined), label: t('nav_hunt')),
+          BottomNavigationBarItem(icon: const Icon(Icons.chat_bubble_outline), label: t('nav_talk')),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_outline), label: t('nav_profile')),
         ],
       ),
     );

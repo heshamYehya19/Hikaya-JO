@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
+import '../../core/localization/app_locale.dart';
 import '../../models/destination.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/main_tab_provider.dart';
@@ -15,6 +16,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocale.of(context).t;
     final user = FirebaseAuth.instance.currentUser;
     final greetingName = user?.email?.split('@').first ?? 'there';
     final destinationsAsync = ref.watch(allDestinationsProvider);
@@ -64,12 +66,12 @@ class HomeScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Popular Destinations', style: Theme.of(context).textTheme.headlineMedium),
+                      Text(t('home_popular_destinations'), style: Theme.of(context).textTheme.headlineMedium),
                       TextButton(
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const AllDestinationsScreen()),
                         ),
-                        child: const Text('View All'),
+                        child: Text(t('home_view_all')),
                       ),
                     ],
                   ),
@@ -81,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
                         if (destinations.isEmpty) {
                           return Center(
                             child: Text(
-                              'No destinations yet — run /seed',
+                              t('home_no_destinations'),
                               style: TextStyle(color: AppColors.textSecondary),
                             ),
                           );
@@ -103,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
                       loading: () => const Center(child: CircularProgressIndicator()),
                       error: (_, __) => Center(
                         child: Text(
-                          "Couldn't load destinations",
+                          t('home_load_error'),
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
@@ -141,6 +143,7 @@ class _HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     final hasImage = featured != null && featured!.imageUrls.isNotEmpty;
 
     return Stack(
@@ -160,28 +163,28 @@ class _HeroHeader extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: hasImage
                 ? LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.background.withOpacity(0.3),
-                      AppColors.background.withOpacity(0.95),
-                    ],
-                  )
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.background.withOpacity(0.3),
+                AppColors.background.withOpacity(0.95),
+              ],
+            )
                 : const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.surfaceElevated, AppColors.background],
-                  ),
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.surfaceElevated, AppColors.background],
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Good Morning, $greetingName',
+              Text('${t('home_greeting')}, $greetingName',
                   style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
               const SizedBox(height: 6),
-              const Text(
-                "Discover Jordan's Hidden Stories",
-                style: TextStyle(
+              Text(
+                t('home_headline'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -192,15 +195,15 @@ class _HeroHeader extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _QuickAction(icon: Icons.map_outlined, label: 'Plan a Journey', onTap: onPlanJourney),
+                    child: _QuickAction(icon: Icons.map_outlined, label: t('home_plan_journey'), onTap: onPlanJourney),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _QuickAction(icon: Icons.emoji_events_outlined, label: 'Hikaya Hunt', onTap: onHunt),
+                    child: _QuickAction(icon: Icons.emoji_events_outlined, label: t('home_hikaya_hunt'), onTap: onHunt),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _QuickAction(icon: Icons.chat_bubble_outline, label: 'Hikaya Talk', onTap: onTalk),
+                    child: _QuickAction(icon: Icons.chat_bubble_outline, label: t('home_hikaya_talk'), onTap: onTalk),
                   ),
                 ],
               ),
@@ -263,6 +266,7 @@ class _ContinueJourneyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -274,17 +278,17 @@ class _ContinueJourneyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Continue Your Journey',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+          Text(t('home_continue_journey'),
+              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
           const SizedBox(height: 4),
           Text(
-            '$stopCount stops · ${totalHours.toStringAsFixed(1)} hours',
+            '$stopCount ${t('unit_stops')} · ${totalHours.toStringAsFixed(1)} ${t('unit_hours')}',
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(onPressed: onContinue, child: const Text('Continue')),
+            child: OutlinedButton(onPressed: onContinue, child: Text(t('home_continue_button'))),
           ),
         ],
       ),
