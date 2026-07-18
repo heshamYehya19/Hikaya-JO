@@ -51,4 +51,6 @@ class Destination {
       'costLevel': costLevel,
     };
   }
+
+
 }
