@@ -244,14 +244,14 @@ class _StopThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = destination?.imageUrls.isNotEmpty == true;
+    final hasImage = destination?.imageAt(1) != null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         width: 48,
         height: 48,
         child: hasImage
-            ? Image.network(destination!.imageUrls.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+            ? Image.network(destination!.imageAt(1)!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
             : _fallback(),
       ),
     );

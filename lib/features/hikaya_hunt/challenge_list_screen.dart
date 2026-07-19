@@ -3,7 +3,9 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/journey_service.dart';
 import '../../models/challenge.dart';
+import '../../models/destination.dart';
 import 'challenge_detail_screen.dart';
 import 'rewards_badges_screen.dart';
 
@@ -23,6 +25,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
   List<Challenge> _challenges = [];
   Set<String> _completedIds = {};
   Map<String, double> _distancesMeters = {};
+  Map<String, Destination> _destinationMap = {};
   bool _isLoading = true;
   _Difficulty? _filter; // null = All
 
@@ -37,6 +40,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 
     final challenges = await _huntService.fetchChallenges();
     final completed = await _huntService.fetchCompletedChallengeIds();
+    final allDestinations = await JourneyService().fetchAllDestinations();
 
     final Map<String, double> distances = {};
     final hasPermission = await _locationService.ensureLocationPermission();
@@ -61,12 +65,11 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
       _challenges = challenges;
       _completedIds = completed;
       _distancesMeters = distances;
+      _destinationMap = {for (var d in allDestinations) d.id: d};
       _isLoading = false;
     });
   }
 
-  // Derived from reward size since Challenge has no difficulty field —
-  // keeps this a UI-only change, no Firestore schema update needed.
   _Difficulty _difficultyOf(Challenge c) {
     switch (c.difficulty.toLowerCase()) {
       case 'medium':
@@ -179,6 +182,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                     final challenge = visible[index];
                     final isDone = _completedIds.contains(challenge.id);
                     final difficulty = _difficultyOf(challenge);
+                    final destination = _destinationMap[challenge.destinationId];
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -199,20 +203,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: isDone ? AppColors.teal.withOpacity(0.15) : AppColors.surfaceElevated,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  isDone ? Icons.check_circle : Icons.explore_outlined,
-                                  color: isDone ? AppColors.teal : AppColors.duneGold,
-                                  size: 22,
-                                ),
-                              ),
+                              _ChallengeThumbnail(destination: destination, isDone: isDone),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -273,6 +264,59 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ChallengeThumbnail extends StatelessWidget {
+  final Destination? destination;
+  final bool isDone;
+  const _ChallengeThumbnail({required this.destination, required this.isDone});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = destination?.imageAt(3);
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: imageUrl != null
+                  ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+                  : _fallback(),
+            ),
+          ),
+          if (isDone)
+            Positioned(
+              right: -4,
+              bottom: -4,
+              child: Container(
+                padding: const EdgeInsets.all(1),
+                decoration: const BoxDecoration(color: AppColors.background, shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle, color: AppColors.teal, size: 16),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDone ? AppColors.teal.withOpacity(0.15) : AppColors.surfaceElevated,
+      ),
+      child: Icon(
+        isDone ? Icons.check_circle : Icons.explore_outlined,
+        color: isDone ? AppColors.teal : AppColors.duneGold,
+        size: 20,
       ),
     );
   }
