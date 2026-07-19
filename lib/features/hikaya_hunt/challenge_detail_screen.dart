@@ -77,7 +77,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final challenge = widget.challenge;
-    final hasImage = _destination?.imageUrls.isNotEmpty == true;
+    final hasImage = _destination?.imageAt(2) != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -102,7 +102,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                     height: 200,
                     child: hasImage
                         ? Image.network(
-                      _destination!.imageUrls.first,
+                      _destination!.imageAt(2)!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const _HeroFallback(),
                     )
