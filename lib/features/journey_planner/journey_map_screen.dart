@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -17,10 +18,6 @@ class JourneyMapScreen extends StatefulWidget {
 }
 
 class _JourneyMapScreenState extends State<JourneyMapScreen> {
-  // Minimalist dark theme for Google Maps so the map matches the app's
-  // dark/gold look instead of Google's default light tiles. Set via the
-  // widget's `style` param (GoogleMapController.setMapStyle is deprecated
-  // as of google_maps_flutter 2.6+).
   static const String _darkMapStyle = '''
 [
   {"elementType": "geometry", "stylers": [{"color": "#17171a"}]},
@@ -29,6 +26,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
   {"featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#2e2e33"}]},
   {"featureType": "poi", "elementType": "geometry", "stylers": [{"color": "#1f1f23"}]},
   {"featureType": "poi", "elementType": "labels.text.fill", "stylers": [{"color": "#a3a0a0"}]},
+  {"featureType": "poi.business", "stylers": [{"visibility": "off"}]},
   {"featureType": "poi.park", "elementType": "geometry", "stylers": [{"color": "#1a2620"}]},
   {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#2a2a2e"}]},
   {"featureType": "road", "elementType": "geometry.stroke", "stylers": [{"color": "#17171a"}]},
@@ -36,6 +34,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
   {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#3a3530"}]},
   {"featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{"color": "#d4a857"}]},
   {"featureType": "transit", "elementType": "geometry", "stylers": [{"color": "#1f1f23"}]},
+  {"featureType": "transit.station", "elementType": "labels.icon", "stylers": [{"visibility": "off"}]},
   {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0a1a1a"}]},
   {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#4cc9b0"}]}
 ]
@@ -77,12 +76,40 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
       }
     }
 
-    _buildMarkers();
+    await _buildMarkers();
+    _buildOverviewPath();
 
     setState(() => _isLoading = false);
   }
 
-  void _buildMarkers() {
+  Future<BitmapDescriptor> _numberedMarkerIcon(int number) async {
+    const double size = 96;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
+
+    final borderPaint = Paint()..color = const Color(0xFF0D0D0F);
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, borderPaint);
+
+    final fillPaint = Paint()..color = const Color(0xFFD4A857);
+    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2 - 5, fillPaint);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '$number',
+        style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF0D0D0F)),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2));
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+  Future<void> _buildMarkers() async {
     final Set<Marker> markers = {};
 
     for (var i = 0; i < widget.journey.stops.length; i++) {
@@ -90,10 +117,13 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
       final destination = _destinationMap[stop.destinationId];
       if (destination == null) continue;
 
+      final icon = await _numberedMarkerIcon(i + 1);
+
       markers.add(
         Marker(
           markerId: MarkerId(destination.id),
           position: LatLng(destination.latitude, destination.longitude),
+          icon: icon,
           infoWindow: InfoWindow(title: '${i + 1}. ${destination.name}', snippet: stop.suggestedTime),
           onTap: () => _selectStop(destination.id, destination.name),
         ),
@@ -111,11 +141,31 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
       );
     }
 
+    if (!mounted) return;
     setState(() {
       _markers
         ..clear()
         ..addAll(markers);
     });
+  }
+
+  void _buildOverviewPath() {
+    final points = <LatLng>[];
+    for (final stop in widget.journey.stops) {
+      final d = _destinationMap[stop.destinationId];
+      if (d != null) points.add(LatLng(d.latitude, d.longitude));
+    }
+    if (points.length < 2) return;
+
+    _polylines.add(
+      Polyline(
+        polylineId: const PolylineId('journey_overview'),
+        points: points,
+        color: AppColors.deepTeal.withOpacity(0.55),
+        width: 3,
+        patterns: [PatternItem.dash(14), PatternItem.gap(10)],
+      ),
+    );
   }
 
   Future<void> _selectStop(String destinationId, String destinationName, {bool animateCamera = true}) async {
@@ -124,7 +174,7 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
 
     setState(() {
       _selectedStopName = destinationName;
-      _polylines.clear();
+      _polylines.removeWhere((p) => p.polylineId.value == 'user_to_selected');
       _routeDistanceText = null;
       _routeDurationText = null;
       _isLoadingRoute = _userPosition != null;
@@ -155,7 +205,6 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
         _fitBounds([origin, dest, ...result.routePoints]);
       }
     } else {
-      // Fallback: Directions API failed or returned no route — show a straight-line estimate instead
       final distanceMeters = _locationService.distanceToTarget(
         userLat: origin.latitude,
         userLng: origin.longitude,
@@ -299,9 +348,9 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                       onPressed: journey.stops.isEmpty
                           ? null
                           : () {
-                              final first = journey.stops.first;
-                              _selectStop(first.destinationId, first.destinationName);
-                            },
+                        final first = journey.stops.first;
+                        _selectStop(first.destinationId, first.destinationName);
+                      },
                       child: const Text('Start Journey'),
                     ),
                   ),

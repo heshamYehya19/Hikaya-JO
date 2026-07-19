@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/localization/app_locale.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/location_service.dart';
 import '../../models/challenge.dart';
@@ -79,10 +80,10 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
     }
   }
 
-  String _difficultyLabel(_Difficulty d) => switch (d) {
-    _Difficulty.easy => 'Easy',
-    _Difficulty.medium => 'Medium',
-    _Difficulty.hard => 'Hard',
+  String _difficultyLabel(_Difficulty d, String Function(String) t) => switch (d) {
+    _Difficulty.easy => t('hunt_filter_easy'),
+    _Difficulty.medium => t('hunt_filter_medium'),
+    _Difficulty.hard => t('hunt_filter_hard'),
   };
 
   Color _difficultyColor(_Difficulty d) => switch (d) {
@@ -99,6 +100,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     final visible =
     _filter == null ? _challenges : _challenges.where((c) => _difficultyOf(c) == _filter).toList();
 
@@ -115,8 +117,8 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Hikaya Hunt', style: AppTypography.headline1.copyWith(fontSize: 24)),
-                        const Text('Explore challenges around you', style: AppTypography.bodySecondary),
+                        Text(t('hunt_title'), style: AppTypography.headline1.copyWith(fontSize: 24)),
+                        Text(t('hunt_subtitle'), style: AppTypography.bodySecondary),
                       ],
                     ),
                   ),
@@ -133,22 +135,22 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  _FilterChip(label: 'All', selected: _filter == null, onTap: () => setState(() => _filter = null)),
+                  _FilterChip(label: t('hunt_filter_all'), selected: _filter == null, onTap: () => setState(() => _filter = null)),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Easy',
+                    label: t('hunt_filter_easy'),
                     selected: _filter == _Difficulty.easy,
                     onTap: () => setState(() => _filter = _Difficulty.easy),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Medium',
+                    label: t('hunt_filter_medium'),
                     selected: _filter == _Difficulty.medium,
                     onTap: () => setState(() => _filter = _Difficulty.medium),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Hard',
+                    label: t('hunt_filter_hard'),
                     selected: _filter == _Difficulty.hard,
                     onTap: () => setState(() => _filter = _Difficulty.hard),
                   ),
@@ -168,7 +170,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                   children: [
                     const SizedBox(height: 80),
                     Center(
-                      child: Text('No challenges in this range', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(t('hunt_empty'), style: TextStyle(color: AppColors.textSecondary)),
                     ),
                   ],
                 )
@@ -234,13 +236,13 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
-                                            _difficultyLabel(difficulty),
+                                            _difficultyLabel(difficulty, t),
                                             style: TextStyle(color: _difficultyColor(difficulty), fontSize: 11, fontWeight: FontWeight.w600),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          isDone ? 'Completed' : '+${challenge.rewardCoins} coins',
+                                          isDone ? t('hunt_completed') : '+${challenge.rewardCoins} ${t('hunt_coins_suffix')}',
                                           style: TextStyle(
                                             color: isDone ? AppColors.teal : AppColors.duneGold,
                                             fontSize: 12,

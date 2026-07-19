@@ -3,12 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/localization/app_locale.dart';
 
 class RewardsBadgesScreen extends StatelessWidget {
   const RewardsBadgesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
@@ -26,13 +28,13 @@ class RewardsBadgesScreen extends StatelessWidget {
                     icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 18),
                   ),
                   const SizedBox(width: 4),
-                  Text('My Rewards', style: AppTypography.headline2.copyWith(fontSize: 20)),
+                  Text(t('hunt_rewards_title'), style: AppTypography.headline2.copyWith(fontSize: 20)),
                 ],
               ),
             ),
             Expanded(
               child: userId == null
-                  ? const Center(child: Text('Not logged in', style: TextStyle(color: AppColors.textSecondary)))
+                  ? Center(child: Text(t('hunt_rewards_not_logged_in'), style: const TextStyle(color: AppColors.textSecondary)))
                   : StreamBuilder<DocumentSnapshot>(
                 stream: FirebaseFirestore.instance.collection('users').doc(userId).snapshots(),
                 builder: (context, snapshot) {
@@ -60,17 +62,17 @@ class RewardsBadgesScreen extends StatelessWidget {
                               const Icon(Icons.monetization_on_outlined, color: AppColors.background, size: 36),
                               const SizedBox(height: 8),
                               Text('$coins', style: const TextStyle(color: AppColors.background, fontSize: 34, fontWeight: FontWeight.bold)),
-                              Text('Coins Earned', style: TextStyle(color: AppColors.background.withOpacity(0.7), fontSize: 13)),
+                              Text(t('hunt_rewards_coins_earned'), style: TextStyle(color: AppColors.background.withOpacity(0.7), fontSize: 13)),
                             ],
                           ),
                         ),
                         const SizedBox(height: 28),
-                        Text('Badges', style: AppTypography.headline2.copyWith(fontSize: 18)),
+                        Text(t('hunt_rewards_badges_heading'), style: AppTypography.headline2.copyWith(fontSize: 18)),
                         const SizedBox(height: 12),
                         Expanded(
                           child: badges.isEmpty
                               ? Center(
-                            child: Text('Complete challenges to earn badges', style: TextStyle(color: AppColors.textSecondary)),
+                            child: Text(t('hunt_rewards_no_badges'), style: TextStyle(color: AppColors.textSecondary)),
                           )
                               : GridView.builder(
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

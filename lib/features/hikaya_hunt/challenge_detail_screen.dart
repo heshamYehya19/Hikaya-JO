@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/localization/app_locale.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/challenge.dart';
@@ -21,7 +22,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
   final _locationService = LocationService();
   bool _isChecking = false;
   bool _isWithinRange = false;
-  String _status = 'Tap "Check My Location" when you arrive';
+  String? _status; // null = show the initial hint via t('hunt_status_initial')
   Destination? _destination;
 
   @override
@@ -38,12 +39,13 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
   }
 
   Future<void> _checkLocation() async {
+    final t = AppLocale.of(context).t;
     setState(() => _isChecking = true);
 
     final hasPermission = await _locationService.ensureLocationPermission();
     if (!hasPermission) {
       setState(() {
-        _status = 'Location permission needed to unlock this challenge';
+        _status = t('hunt_status_no_permission');
         _isChecking = false;
       });
       return;
@@ -58,17 +60,18 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
         targetLng: widget.challenge.longitude,
       );
       final withinRange = distance <= widget.challenge.radiusMeters;
+      final distanceLabel = distance < 1000 ? '${distance.round()}m' : '${(distance / 1000).toStringAsFixed(1)}km';
 
       setState(() {
         _isWithinRange = withinRange;
         _status = withinRange
-            ? "You're here! Take a photo to complete this challenge."
-            : 'Keep going — ${distance < 1000 ? '${distance.round()}m' : '${(distance / 1000).toStringAsFixed(1)}km'} to go';
+            ? t('hunt_status_arrived')
+            : '${t('hunt_status_keep_going')} $distanceLabel ${t('hunt_status_to_go')}';
         _isChecking = false;
       });
     } catch (e) {
       setState(() {
-        _status = 'Error checking location: $e';
+        _status = '${t('hunt_status_location_error')} $e';
         _isChecking = false;
       });
     }
@@ -76,6 +79,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
     final challenge = widget.challenge;
     final hasImage = _destination?.imageUrls.isNotEmpty == true;
 
@@ -125,7 +129,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                       children: [
                         _Pill(
                           icon: Icons.monetization_on_outlined,
-                          label: '${challenge.rewardCoins} Coins',
+                          label: '${challenge.rewardCoins} ${t('hunt_coins_pill')}',
                           color: AppColors.duneGold,
                         ),
                         const SizedBox(width: 8),
@@ -146,7 +150,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                         border: Border.all(color: _isWithinRange ? AppColors.teal : AppColors.duneLight),
                       ),
                       child: Text(
-                        _status,
+                        _status ?? t('hunt_status_initial'),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: _isWithinRange ? AppColors.teal : AppColors.textPrimary),
                       ),
@@ -158,7 +162,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                         onPressed: _isChecking ? null : _checkLocation,
                         child: _isChecking
                             ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
-                            : const Text('Check My Location'),
+                            : Text(t('hunt_check_location')),
                       ),
                     ),
                     if (_isWithinRange) ...[
@@ -170,7 +174,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                             MaterialPageRoute(builder: (_) => CameraCaptureScreen(challenge: challenge)),
                           ),
                           icon: const Icon(Icons.camera_alt_outlined),
-                          label: const Text('Take Photo & Unlock'),
+                          label: Text(t('hunt_take_photo_unlock')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
                             side: const BorderSide(color: AppColors.duneLight),

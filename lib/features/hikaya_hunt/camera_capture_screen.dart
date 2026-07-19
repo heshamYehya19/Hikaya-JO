@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/localization/app_locale.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/photo_verification_service.dart';
 import '../../core/services/landmark_verification_service.dart';
@@ -39,6 +40,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
   Future<void> _submit() async {
     if (_photo == null) return;
+    final t = AppLocale.of(context).t;
     setState(() {
       _isVerifying = true;
       _error = null;
@@ -58,7 +60,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     } else if (landmarkResult.landmarkName != null) {
       verification = PhotoVerificationResult(
         plausible: false,
-        reason: 'This looks like ${landmarkResult.landmarkName}, not ${widget.challenge.destinationName}.',
+        reason: '${t('hunt_camera_wrong_landmark')} ${landmarkResult.landmarkName}, ${t('hunt_camera_wrong_landmark_not')} ${widget.challenge.destinationName}.',
       );
     } else {
       // Tier 2: fall back to the looser Gemini plausibility check.
@@ -77,16 +79,16 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         context: context,
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.surface,
-          title: const Text('Take another look?', style: TextStyle(color: AppColors.textPrimary)),
+          title: Text(t('hunt_camera_retake_dialog_title'), style: const TextStyle(color: AppColors.textPrimary)),
           content: Text(
             verification.reason.isNotEmpty
                 ? verification.reason
-                : "This photo doesn't look like it matches ${widget.challenge.destinationName}.",
+                : "${t('hunt_camera_retake_dialog_default')} ${widget.challenge.destinationName}.",
             style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Retake Photo')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit Anyway')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t('hunt_camera_retake_photo_btn'))),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(t('hunt_camera_submit_anyway'))),
           ],
         ),
       );
@@ -107,11 +109,11 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       setState(() {
         _isDone = true;
         _isSubmitting = false;
-        if (!awarded) _error = 'Already completed — no duplicate reward given';
+        if (!awarded) _error = t('hunt_camera_already_completed');
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to submit: $e';
+        _error = '${t('hunt_camera_submit_failed')} $e';
         _isSubmitting = false;
       });
     }
@@ -119,6 +121,8 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocale.of(context).t;
+
     if (_isDone) {
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -137,17 +141,17 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                     child: const Icon(Icons.star_rounded, size: 52, color: AppColors.background),
                   ),
                   const SizedBox(height: 24),
-                  Text('Congratulations!', style: AppTypography.headline1.copyWith(fontSize: 26), textAlign: TextAlign.center),
+                  Text(t('hunt_camera_congrats'), style: AppTypography.headline1.copyWith(fontSize: 26), textAlign: TextAlign.center),
                   const SizedBox(height: 6),
-                  const Text(
-                    "You unlocked a new story!",
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+                  Text(
+                    t('hunt_camera_unlocked'),
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 28),
                   if (_error == null) ...[
                     Text(
-                      '+${widget.challenge.rewardCoins} Coins Earned',
+                      '+${widget.challenge.rewardCoins} ${t('hunt_camera_coins_earned')}',
                       style: const TextStyle(color: AppColors.duneGold, fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
@@ -163,7 +167,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                         children: [
                           const Icon(Icons.emoji_events, size: 16, color: AppColors.deepTeal),
                           const SizedBox(width: 8),
-                          Text('"${widget.challenge.badgeName}" badge earned', style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                          Text('"${widget.challenge.badgeName}" ${t('hunt_camera_badge_earned')}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -173,15 +177,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      // Fixed: the old popUntil predicate checked route.settings.name,
-                      // but none of these routes are named, so it silently popped
-                      // all the way to the app's very first screen instead of just
-                      // back to the challenge list. This pops exactly the 2 screens
-                      // pushed to get here (camera + challenge detail).
                       onPressed: () => Navigator.of(context)
                         ..pop()
                         ..pop(),
-                      child: const Text('Great!'),
+                      child: Text(t('hunt_camera_great')),
                     ),
                   ),
                 ],
@@ -209,10 +208,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text("You're in the right place!", style: AppTypography.headline2.copyWith(fontSize: 20)),
-              const Padding(
-                padding: EdgeInsets.only(top: 4, bottom: 20),
-                child: Text('Take a photo to unlock the story', style: AppTypography.bodySecondary),
+              Text(t('hunt_camera_you_are_here'), style: AppTypography.headline2.copyWith(fontSize: 20)),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 20),
+                child: Text(t('hunt_camera_subtitle'), style: AppTypography.bodySecondary),
               ),
               Expanded(
                 child: _photo == null
@@ -235,7 +234,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                           child: const Icon(Icons.camera_alt_outlined, size: 32, color: AppColors.duneGold),
                         ),
                         const SizedBox(height: 14),
-                        const Text('No photo yet', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(t('hunt_camera_no_photo'), style: const TextStyle(color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -255,7 +254,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _takePhoto,
                   icon: const Icon(Icons.camera_alt_outlined),
-                  label: Text(_photo == null ? 'Take Photo & Unlock' : 'Retake Photo'),
+                  label: Text(_photo == null ? t('hunt_take_photo_unlock') : t('hunt_camera_retake')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     side: const BorderSide(color: AppColors.duneLight),
@@ -282,7 +281,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                   onPressed: (_photo == null || _isSubmitting || _isVerifying) ? null : _submit,
                   child: (_isSubmitting || _isVerifying)
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
-                      : const Text('Complete Challenge'),
+                      : Text(t('hunt_camera_complete')),
                 ),
               ),
             ],

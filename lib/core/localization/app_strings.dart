@@ -76,6 +76,55 @@ class AppStrings {
     'talk_listening': 'Listening…',
     'talk_tap_to_speak': 'Tap to speak',
     'talk_service_busy': 'Translation service is busy — please try again in a moment',
+
+    // Hikaya Hunt — list screen
+    'hunt_title': 'Hikaya Hunt',
+    'hunt_subtitle': 'Explore challenges around you',
+    'hunt_filter_all': 'All',
+    'hunt_filter_easy': 'Easy',
+    'hunt_filter_medium': 'Medium',
+    'hunt_filter_hard': 'Hard',
+    'hunt_empty': 'No challenges in this range',
+    'hunt_completed': 'Completed',
+    'hunt_coins_suffix': 'coins',
+
+    // Hikaya Hunt — detail screen
+    'hunt_status_initial': 'Tap "Check My Location" when you arrive',
+    'hunt_status_no_permission': 'Location permission needed to unlock this challenge',
+    'hunt_status_arrived': "You're here! Take a photo to complete this challenge.",
+    'hunt_status_keep_going': 'Keep going —',
+    'hunt_status_to_go': 'to go',
+    'hunt_status_location_error': 'Error checking location:',
+    'hunt_check_location': 'Check My Location',
+    'hunt_take_photo_unlock': 'Take Photo & Unlock',
+    'hunt_coins_pill': 'Coins',
+
+    // Hikaya Hunt — camera capture
+    'hunt_camera_you_are_here': "You're in the right place!",
+    'hunt_camera_subtitle': 'Take a photo to unlock the story',
+    'hunt_camera_no_photo': 'No photo yet',
+    'hunt_camera_retake': 'Retake Photo',
+    'hunt_camera_complete': 'Complete Challenge',
+    'hunt_camera_retake_dialog_title': 'Take another look?',
+    'hunt_camera_retake_dialog_default': "This photo doesn't look like it matches",
+    'hunt_camera_wrong_landmark': 'This looks like',
+    'hunt_camera_wrong_landmark_not': 'not',
+    'hunt_camera_retake_photo_btn': 'Retake Photo',
+    'hunt_camera_submit_anyway': 'Submit Anyway',
+    'hunt_camera_already_completed': 'Already completed — no duplicate reward given',
+    'hunt_camera_submit_failed': 'Failed to submit:',
+    'hunt_camera_congrats': 'Congratulations!',
+    'hunt_camera_unlocked': 'You unlocked a new story!',
+    'hunt_camera_coins_earned': 'Coins Earned',
+    'hunt_camera_badge_earned': 'badge earned',
+    'hunt_camera_great': 'Great!',
+
+    // Hikaya Hunt — rewards/badges
+    'hunt_rewards_title': 'My Rewards',
+    'hunt_rewards_not_logged_in': 'Not logged in',
+    'hunt_rewards_coins_earned': 'Coins Earned',
+    'hunt_rewards_badges_heading': 'Badges',
+    'hunt_rewards_no_badges': 'Complete challenges to earn badges',
   };
 
   static const Map<String, String> ar = {
@@ -149,5 +198,54 @@ class AppStrings {
     'talk_listening': 'يستمع…',
     'talk_tap_to_speak': 'اضغط للتحدث',
     'talk_service_busy': 'خدمة الترجمة مشغولة — يرجى المحاولة مرة أخرى بعد قليل',
+
+    // Hikaya Hunt — list screen
+    'hunt_title': 'مطاردة حكاية',
+    'hunt_subtitle': 'استكشف التحديات من حولك',
+    'hunt_filter_all': 'الكل',
+    'hunt_filter_easy': 'سهل',
+    'hunt_filter_medium': 'متوسط',
+    'hunt_filter_hard': 'صعب',
+    'hunt_empty': 'لا توجد تحديات في هذا النطاق',
+    'hunt_completed': 'مكتمل',
+    'hunt_coins_suffix': 'عملة',
+
+    // Hikaya Hunt — detail screen
+    'hunt_status_initial': 'اضغط "تحقق من موقعي" عند وصولك',
+    'hunt_status_no_permission': 'إذن الموقع مطلوب لفتح هذا التحدي',
+    'hunt_status_arrived': 'لقد وصلت! التقط صورة لإكمال هذا التحدي.',
+    'hunt_status_keep_going': 'واصل التقدم —',
+    'hunt_status_to_go': 'متبقية',
+    'hunt_status_location_error': 'خطأ في التحقق من الموقع:',
+    'hunt_check_location': 'تحقق من موقعي',
+    'hunt_take_photo_unlock': 'التقط صورة وافتح',
+    'hunt_coins_pill': 'عملات',
+
+    // Hikaya Hunt — camera capture
+    'hunt_camera_you_are_here': 'أنت في المكان الصحيح!',
+    'hunt_camera_subtitle': 'التقط صورة لفتح القصة',
+    'hunt_camera_no_photo': 'لا توجد صورة بعد',
+    'hunt_camera_retake': 'إعادة التقاط الصورة',
+    'hunt_camera_complete': 'إكمال التحدي',
+    'hunt_camera_retake_dialog_title': 'ألقِ نظرة أخرى؟',
+    'hunt_camera_retake_dialog_default': 'هذه الصورة لا تبدو مطابقة لـ',
+    'hunt_camera_wrong_landmark': 'يبدو أن هذه',
+    'hunt_camera_wrong_landmark_not': 'وليست',
+    'hunt_camera_retake_photo_btn': 'إعادة التقاط الصورة',
+    'hunt_camera_submit_anyway': 'إرسال على أي حال',
+    'hunt_camera_already_completed': 'مكتمل مسبقاً — لا مكافأة مضاعفة',
+    'hunt_camera_submit_failed': 'فشل الإرسال:',
+    'hunt_camera_congrats': 'تهانينا!',
+    'hunt_camera_unlocked': 'لقد فتحت قصة جديدة!',
+    'hunt_camera_coins_earned': 'عملة مكتسبة',
+    'hunt_camera_badge_earned': 'وسام مكتسب',
+    'hunt_camera_great': 'رائع!',
+
+    // Hikaya Hunt — rewards/badges
+    'hunt_rewards_title': 'مكافآتي',
+    'hunt_rewards_not_logged_in': 'لم يتم تسجيل الدخول',
+    'hunt_rewards_coins_earned': 'عملة مكتسبة',
+    'hunt_rewards_badges_heading': 'الأوسمة',
+    'hunt_rewards_no_badges': 'أكمل التحديات لكسب الأوسمة',
   };
 }
