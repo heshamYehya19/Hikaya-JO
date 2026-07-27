@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +10,6 @@ import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
 import '../../providers/translation_provider.dart';
 import '../../models/talk_language.dart';
-import '../../widgets/language_picker.dart';
 
 class HikayaTalkScreen extends ConsumerStatefulWidget {
   const HikayaTalkScreen({super.key});
@@ -39,7 +39,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
     _initSpeech();
     _loadSavedLanguages();
   }
@@ -169,28 +169,6 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
     super.dispose();
   }
 
-  Widget _pulseRing(double phase) {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final progress = (_pulseController.value + phase) % 1.0;
-        final scale = 1.0 + progress * 0.9;
-        final opacity = _isListening ? (1.0 - progress).clamp(0.0, 1.0) * 0.35 : 0.0;
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: opacity,
-            child: Container(
-              width: 84,
-              height: 84,
-              decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.error),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocale.of(context).t;
@@ -199,7 +177,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             children: [
               Column(
@@ -217,116 +195,148 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
-              // Language selectors: "I Speak" / "They Speak"
+              // Compact pill language selectors + swap
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: LanguagePicker(
-                      label: t('talk_i_speak'),
-                      language: _myLanguage,
-                      onChanged: (lang) => setState(() {
-                        _myLanguage = lang;
-                        _recognizedText = '';
-                        _translatedText = '';
-                      }),
+                  _LanguagePill(
+                    language: _myLanguage,
+                    onChanged: (lang) => setState(() {
+                      _myLanguage = lang;
+                      _recognizedText = '';
+                      _translatedText = '';
+                    }),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(color: AppColors.deepTeal.withOpacity(0.15), shape: BoxShape.circle),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _swapLanguages,
+                      icon: AnimatedRotation(
+                        turns: _swapTurns,
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeOutBack,
+                        child: const Icon(Icons.swap_horiz, color: AppColors.deepTeal, size: 18),
+                      ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: _swapLanguages,
-                    icon: AnimatedRotation(
-                      turns: _swapTurns,
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOutBack,
-                      child: const Icon(Icons.swap_horiz, color: AppColors.deepTeal),
-                    ),
-                  ),
-                  Expanded(
-                    child: LanguagePicker(
-                      label: t('talk_they_speak'),
-                      language: _theirLanguage,
-                      onChanged: (lang) => setState(() {
-                        _theirLanguage = lang;
-                        _recognizedText = '';
-                        _translatedText = '';
-                      }),
-                    ),
+                  const SizedBox(width: 10),
+                  _LanguagePill(
+                    language: _theirLanguage,
+                    onChanged: (lang) => setState(() {
+                      _theirLanguage = lang;
+                      _recognizedText = '';
+                      _translatedText = '';
+                    }),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
 
-              // Recognized text card
-              _TranscriptCard(
-                label: '${t('talk_you_said')} (${_myLanguage.name})',
-                text: _recognizedText.isEmpty ? t('talk_tap_to_speak_hint') : _recognizedText,
-                isPlaceholder: _recognizedText.isEmpty,
+              // Big centered transcript — the reference's main focal area
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: Text(
+                            _recognizedText.isEmpty ? t('talk_tap_to_speak_hint') : _recognizedText,
+                            key: ValueKey('recognized-$_recognizedText'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                              color: _recognizedText.isEmpty ? AppColors.textSecondary : AppColors.textPrimary,
+                              fontStyle: _recognizedText.isEmpty ? FontStyle.italic : FontStyle.normal,
+                            ),
+                          ),
+                        ),
+                        if (_isListening) ...[
+                          const SizedBox(height: 28),
+                          _Waveform(animation: _pulseController),
+                        ],
+                        if (_translatedText.isNotEmpty || _isTranslating) ...[
+                          const SizedBox(height: 32),
+                          Container(height: 1, width: 60, color: AppColors.duneLight),
+                          const SizedBox(height: 24),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: Column(
+                              key: ValueKey('translated-$_translatedText-$_isTranslating'),
+                              children: [
+                                Text(
+                                  _isTranslating ? t('talk_translating') : _translatedText,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.35,
+                                    color: AppColors.deepTeal,
+                                  ),
+                                ),
+                                if (!_isTranslating && _translatedText.isNotEmpty) ...[
+                                  const SizedBox(height: 14),
+                                  GestureDetector(
+                                    onTap: _replay,
+                                    child: const Icon(Icons.volume_up_rounded, color: AppColors.deepTeal, size: 22),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
 
-              // Translated text card
-              _TranscriptCard(
-                label: '${t('talk_translated')} (${_theirLanguage.name})',
-                text: _isTranslating
-                    ? t('talk_translating')
-                    : (_translatedText.isEmpty ? t('talk_translation_placeholder') : _translatedText),
-                isPlaceholder: _translatedText.isEmpty && !_isTranslating,
-                accent: true,
-                onReplay: _translatedText.isEmpty || _isTranslating ? null : _replay,
-              ),
-
-              const Spacer(),
-
-              // Mic button with animated listening rings
+              // Mic button
               GestureDetector(
                 onTapDown: (_) => setState(() => _micPressed = true),
                 onTapUp: (_) => setState(() => _micPressed = false),
                 onTapCancel: () => setState(() => _micPressed = false),
                 onTap: _isTranslating ? null : (_isListening ? _stopListening : _startListening),
-                child: SizedBox(
-                  width: 130,
-                  height: 130,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      _pulseRing(0.0),
-                      _pulseRing(0.5),
-                      AnimatedScale(
-                        scale: _micPressed ? 0.92 : 1.0,
-                        duration: const Duration(milliseconds: 120),
-                        curve: Curves.easeOut,
-                        child: Container(
-                          width: 84,
-                          height: 84,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _isListening ? AppColors.error : AppColors.deepTeal,
-                            boxShadow: [
-                              BoxShadow(
-                                color: (_isListening ? AppColors.error : AppColors.deepTeal).withOpacity(0.35),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                            color: AppColors.background,
-                            size: 36,
-                          ),
+                child: AnimatedScale(
+                  scale: _micPressed ? 0.92 : 1.0,
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.easeOut,
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isListening ? AppColors.error : AppColors.deepTeal,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_isListening ? AppColors.error : AppColors.deepTeal).withOpacity(0.35),
+                          blurRadius: 20,
+                          spreadRadius: 2,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Icon(
+                      _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                      color: AppColors.background,
+                      size: 32,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 _isListening ? t('talk_listening') : t('talk_tap_to_speak'),
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -335,67 +345,77 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
   }
 }
 
-class _TranscriptCard extends StatelessWidget {
-  final String label;
-  final String text;
-  final bool isPlaceholder;
-  final bool accent;
-  final VoidCallback? onReplay;
-
-  const _TranscriptCard({
-    required this.label,
-    required this.text,
-    required this.isPlaceholder,
-    this.accent = false,
-    this.onReplay,
-  });
+/// Compact flag+name+chevron pill — a lighter-weight alternative to the
+/// boxed LanguagePicker used on Profile. Local to this screen so Profile's
+/// picker (which is shared/reused there) stays untouched.
+class _LanguagePill extends StatelessWidget {
+  final TalkLanguage language;
+  final ValueChanged<TalkLanguage> onChanged;
+  const _LanguagePill({required this.language, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: accent ? AppColors.teal.withOpacity(0.08) : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent ? AppColors.teal.withOpacity(0.3) : AppColors.duneLight),
+    return PopupMenuButton<TalkLanguage>(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      onSelected: onChanged,
+      itemBuilder: (context) => kTalkLanguages
+          .map((lang) => PopupMenuItem(
+        value: lang,
+        child: Text('${lang.flag}  ${lang.name}', style: const TextStyle(color: AppColors.textPrimary)),
+      ))
+          .toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.duneLight),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(language.flag, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(language.name, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(width: 2),
+            const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textSecondary),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-              if (onReplay != null)
-                GestureDetector(
-                  onTap: onReplay,
-                  child: const Icon(Icons.volume_up_rounded, size: 18, color: AppColors.teal),
-                ),
-            ],
+    );
+  }
+}
+
+/// Animated bar waveform, shown only while actively listening — each bar
+/// oscillates on its own phase offset so it reads as organic rather than
+/// a single wave moving in lockstep.
+class _Waveform extends StatelessWidget {
+  final Animation<double> animation;
+  const _Waveform({required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return SizedBox(
+          height: 36,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(20, (i) {
+              final phase = (animation.value * 2 * math.pi) + (i * 0.5);
+              final height = 6 + (math.sin(phase).abs() * 26);
+              return Container(
+                width: 3,
+                height: height,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(color: AppColors.deepTeal, borderRadius: BorderRadius.circular(2)),
+              );
+            }),
           ),
-          const SizedBox(height: 6),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(animation),
-                child: child,
-              ),
-            ),
-            child: Text(
-              text,
-              key: ValueKey(text),
-              style: TextStyle(
-                fontSize: 16,
-                color: isPlaceholder ? AppColors.textSecondary : AppColors.textPrimary,
-                fontStyle: isPlaceholder ? FontStyle.italic : FontStyle.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
