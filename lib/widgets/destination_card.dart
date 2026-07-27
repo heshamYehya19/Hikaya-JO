@@ -48,7 +48,7 @@ class DestinationCard extends StatelessWidget {
             children: [
               hasImage
                   ? Image.network(
-                      destination.imageAt(0),
+                      destination.imageAt(0)!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _fallback(),
                     )

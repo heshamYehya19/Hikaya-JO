@@ -191,6 +191,13 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: TextButton(
+                          onPressed: () => setState(() => _isWithinRange = true),
+                          child: const Text('🛠️ DEV: Skip to Photo Step (bypass GPS check)'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
                           onPressed: () async {
                             final huntService = HuntService();
                             await huntService.completeChallenge(challenge);
