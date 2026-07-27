@@ -51,4 +51,16 @@ class Destination {
       'costLevel': costLevel,
     };
   }
+
+  extension DestinationImages on Destination {
+  /// Bounds-safe image lookup by "slot" — different screens pass a
+  /// different index so they don't all show the same photo. Cycles with
+  /// modulo so it never crashes regardless of list length, and returns
+  /// null (→ fallback icon) if this destination has no images at all.
+  String? imageAt(int index) {
+    if (imageUrls.isEmpty) return null;
+    return imageUrls[index % imageUrls.length];
+  }
+}
+
 }

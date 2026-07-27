@@ -34,7 +34,7 @@ class DestinationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = destination.imageUrls.isNotEmpty;
+    final hasImage = destination.imageAt(0) != null;
 
     return GestureDetector(
       onTap: onTap,
@@ -48,7 +48,7 @@ class DestinationCard extends StatelessWidget {
             children: [
               hasImage
                   ? Image.network(
-                      destination.imageUrls.first,
+                      destination.imageAt(0),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _fallback(),
                     )
