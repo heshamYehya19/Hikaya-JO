@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -153,10 +154,10 @@ class _HeroHeader extends StatelessWidget {
       children: [
         if (hasImage)
           Positioned.fill(
-            child: Image.network(
-              featured!.imageUrls.first,
+            child: CachedNetworkImage(
+              imageUrl: featured!.imageUrls.first,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
         Container(

@@ -125,6 +125,7 @@ class AppStrings {
     'hunt_rewards_coins_earned': 'Coins Earned',
     'hunt_rewards_badges_heading': 'Badges',
     'hunt_rewards_no_badges': 'Complete challenges to earn badges',
+    'hunt_status_completed': 'Challenge Completed',
 
     //profile
     'profile_downloaded_journeys': 'Downloaded Journeys',
@@ -252,6 +253,8 @@ class AppStrings {
     'hunt_rewards_coins_earned': 'عملة مكتسبة',
     'hunt_rewards_badges_heading': 'الأوسمة',
     'hunt_rewards_no_badges': 'أكمل التحديات لكسب الأوسمة',
+    'hunt_status_completed': 'التحدي مكتمل',
+
 
     //profile
     'profile_downloaded_journeys': 'الرحلات المحمّلة',

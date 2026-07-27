@@ -13,6 +13,7 @@ import '../../providers/journey_provider.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
 import '../../core/services/offline_service.dart';
+import '../../providers/main_tab_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -85,6 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    ref.read(mainTabIndexProvider.notifier).state = 0;
     await FirebaseAuth.instance.signOut();
     if (mounted) context.goNamed('login');
   }

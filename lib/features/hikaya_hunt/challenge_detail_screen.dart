@@ -12,7 +12,8 @@ import '../../core/services/hunt_service.dart';
 
 class ChallengeDetailScreen extends StatefulWidget {
   final Challenge challenge;
-  const ChallengeDetailScreen({super.key, required this.challenge});
+  final bool isCompleted;
+  const ChallengeDetailScreen({super.key, required this.challenge, required this.isCompleted});
 
   @override
   State<ChallengeDetailScreen> createState() => _ChallengeDetailScreenState();
@@ -82,6 +83,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
     final t = AppLocale.of(context).t;
     final challenge = widget.challenge;
     final hasImage = _destination?.imageAt(2) != null;
+    final isCompleted = widget.isCompleted;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -99,19 +101,40 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 200,
-                    child: hasImage
-                        ? Image.network(
-                      _destination!.imageAt(2)!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _HeroFallback(),
-                    )
-                        : const _HeroFallback(),
-                  ),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 200,
+                        child: hasImage
+                            ? Image.network(
+                          _destination!.imageAt(2)!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const _HeroFallback(),
+                        )
+                            : const _HeroFallback(),
+                      ),
+                    ),
+                    if (isCompleted)
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle, color: AppColors.background, size: 14),
+                              const SizedBox(width: 4),
+                              Text(t('hunt_status_completed'), style: const TextStyle(color: AppColors.background, fontSize: 11, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Padding(
@@ -141,75 +164,95 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _isWithinRange ? AppColors.teal.withOpacity(0.1) : AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _isWithinRange ? AppColors.teal : AppColors.duneLight),
+                    if (isCompleted) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.teal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.teal),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle, color: AppColors.teal, size: 20),
+                            const SizedBox(width: 8),
+                            Text(t('hunt_status_completed'), style: const TextStyle(color: AppColors.teal, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                      child: Text(
-                        _status ?? t('hunt_status_initial'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: _isWithinRange ? AppColors.teal : AppColors.textPrimary),
+                    ] else ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _isWithinRange ? AppColors.teal.withOpacity(0.1) : AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _isWithinRange ? AppColors.teal : AppColors.duneLight),
+                        ),
+                        child: Text(
+                          _status ?? t('hunt_status_initial'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: _isWithinRange ? AppColors.teal : AppColors.textPrimary),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isChecking ? null : _checkLocation,
-                        child: _isChecking
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
-                            : Text(t('hunt_check_location')),
-                      ),
-                    ),
-                    if (_isWithinRange) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => CameraCaptureScreen(challenge: challenge)),
+                        child: ElevatedButton(
+                          onPressed: _isChecking ? null : _checkLocation,
+                          child: _isChecking
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
+                              : Text(t('hunt_check_location')),
+                        ),
+                      ),
+                      if (_isWithinRange) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => CameraCaptureScreen(challenge: challenge)),
+                            ),
+                            icon: const Icon(Icons.camera_alt_outlined),
+                            label: Text(t('hunt_take_photo_unlock')),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: const BorderSide(color: AppColors.duneLight),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                            ),
                           ),
-                          icon: const Icon(Icons.camera_alt_outlined),
-                          label: Text(t('hunt_take_photo_unlock')),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.duneLight),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        ),
+                      ],
+                      // Dev-only shortcut, gated behind kDebugMode so it can never
+                      // ship in a release build — marked for removal before submission.
+                      if (kDebugMode) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () => setState(() => _isWithinRange = true),
+                            child: const Text('🛠️ DEV: Skip to Photo Step (bypass GPS check)'),
                           ),
                         ),
-                      ),
-                    ],
-                    // Dev-only shortcut, gated behind kDebugMode so it can never
-                    // ship in a release build — marked for removal before submission.
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: () => setState(() => _isWithinRange = true),
-                          child: const Text('🛠️ DEV: Skip to Photo Step (bypass GPS check)'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: () async {
+                              final huntService = HuntService();
+                              await huntService.completeChallenge(challenge);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('DEV: challenge force-completed')),
+                                );
+                              }
+                            },
+                            child: const Text('🛠️ DEV: Force Complete (skip location check)'),
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: () async {
-                            final huntService = HuntService();
-                            await huntService.completeChallenge(challenge);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('DEV: challenge force-completed')),
-                              );
-                            }
-                          },
-                          child: const Text('🛠️ DEV: Force Complete (skip location check)'),
-                        ),
-                      ),
+                      ],
                     ],
                     const SizedBox(height: 24),
                   ],

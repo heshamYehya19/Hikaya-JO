@@ -10,6 +10,7 @@ import '../../providers/journey_provider.dart';
 import 'destination_detail_screen.dart';
 import 'journey_map_screen.dart';
 import '../../core/services/offline_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ItineraryScreen extends ConsumerStatefulWidget {
   const ItineraryScreen({super.key});
@@ -251,7 +252,7 @@ class _StopThumbnail extends StatelessWidget {
         width: 48,
         height: 48,
         child: hasImage
-            ? Image.network(destination!.imageAt(1)!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+            ? CachedNetworkImage(imageUrl: destination!.imageAt(1)!, fit: BoxFit.cover, errorWidget: (_, __, ___) => _fallback())
             : _fallback(),
       ),
     );
