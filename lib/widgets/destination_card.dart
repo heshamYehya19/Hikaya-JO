@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../models/destination.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Photo card used in horizontal destination lists (Home's "Popular
 /// Destinations", journey results, etc). Falls back to a gradient + type
@@ -47,11 +48,11 @@ class DestinationCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               hasImage
-                  ? Image.network(
-                      destination.imageAt(0)!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fallback(),
-                    )
+                  ? CachedNetworkImage(
+                imageUrl: destination.imageAt(0)!,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _fallback(),
+              )
                   : _fallback(),
               DecoratedBox(
                 decoration: BoxDecoration(

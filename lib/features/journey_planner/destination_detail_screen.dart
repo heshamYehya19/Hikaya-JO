@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
@@ -143,10 +144,10 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
                         height: 200,
                         width: double.infinity,
                         child: _destination!.imageAt(0) != null
-                            ? Image.network(
-                          _destination!.imageAt(0)!,
+                            ? CachedNetworkImage(
+                          imageUrl: _destination!.imageAt(0)!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _heroFallback(),
+                          errorWidget: (_, __, ___) => _heroFallback(),
                         )
                             : _heroFallback(),
                       ),

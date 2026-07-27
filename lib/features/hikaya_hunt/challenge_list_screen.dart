@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
@@ -190,7 +191,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: GestureDetector(
                         onTap: () => Navigator.of(context)
-                            .push(MaterialPageRoute(builder: (_) => ChallengeDetailScreen(challenge: challenge)))
+                            .push(MaterialPageRoute(builder: (_) => ChallengeDetailScreen(challenge: challenge, isCompleted: isDone)))
                             .then((_) => _load()),
                         child: Container(
                           padding: const EdgeInsets.all(16),
@@ -291,7 +292,7 @@ class _ChallengeThumbnail extends StatelessWidget {
               width: 44,
               height: 44,
               child: imageUrl != null
-                  ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+                  ? CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _fallback())
                   : _fallback(),
             ),
           ),
