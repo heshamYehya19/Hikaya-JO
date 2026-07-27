@@ -10,10 +10,22 @@ import '../../features/hikaya_hunt/geofence_test_screen.dart';
 import '../../features/home/main_shell.dart';
 import '../../features/journey_planner/seed_screen.dart';
 import '../../core/services/challenge_seed_service.dart';
+import '../../features/onboarding/interests_setup_screen.dart';
+import '../../features/onboarding/travel_preferences_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
+    GoRoute(
+      path: '/interests-setup',
+      name: 'interestsSetup',
+      builder: (context, state) => const InterestsSetupScreen(),
+    ),
+    GoRoute(
+      path: '/travel-preferences',
+      name: 'travelPreferences',
+      builder: (context, state) => const TravelPreferencesScreen(),
+    ),
     GoRoute(
       path: '/talk',
       name: 'hikayaTalk',

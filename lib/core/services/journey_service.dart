@@ -20,7 +20,7 @@ class JourneyService {
       apiKey: apiKey,
       generationConfig: GenerationConfig(
         responseMimeType: 'application/json',
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
       ),
     );
   }
@@ -145,7 +145,9 @@ IMPORTANT: The user has $availableHours hours total (${availableHours * 60} minu
         );
       } catch (e) {
         attempt++;
-        final isRetryable = e.toString().contains('503') || e.toString().contains('UNAVAILABLE');
+        final isRetryable = e.toString().contains('503') ||
+            e.toString().contains('UNAVAILABLE') ||
+            e is FormatException;
         if (!isRetryable || attempt >= maxRetries) rethrow;
         await Future.delayed(Duration(milliseconds: 500 * attempt));
       }

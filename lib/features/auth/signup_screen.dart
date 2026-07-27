@@ -65,7 +65,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       // Next in the build order: Travel Profile Setup screen — routing to
       // 'home' placeholder for now until that screen exists
-      if (mounted) context.goNamed('home');
+      if (mounted) context.goNamed('interestsSetup');
     } on FirebaseAuthException catch (e) {
       setState(() => _errorMessage = ref.read(authServiceProvider).getErrorMessage(e));
     } catch (e) {

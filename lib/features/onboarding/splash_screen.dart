@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/services/app_prefs_service.dart';
+import '../../core/services/profile_setup_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 2), () async {
       if (!mounted) return;
 
       // First launch ever (no language picked yet) — that comes before
@@ -27,7 +28,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        context.goNamed('home'); // already signed in — skip straight in, works offline
+        final route = await ProfileSetupService().resolvePostAuthRoute();
+        context.goNamed(route);
       } else {
         context.goNamed('onboarding');
       }

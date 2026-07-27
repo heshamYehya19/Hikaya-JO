@@ -3,6 +3,8 @@ import '../core/services/journey_service.dart';
 import '../models/journey.dart';
 import '../models/destination.dart';
 import 'story_guide_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 final journeyServiceProvider = Provider<JourneyService>((ref) => JourneyService());
 
@@ -26,4 +28,12 @@ final latestJourneyProvider = FutureProvider<Journey?>((ref) async {
 /// screen already calls, rather than adding a duplicate method.
 final featuredDestinationProvider = FutureProvider<Destination?>((ref) {
   return ref.read(storyGuideServiceProvider).fetchDestination('petra');
+});
+/// The interests picked on InterestsSetupScreen — used by Home to
+/// personalize which destinations surface first.
+final userInterestsProvider = FutureProvider<List<String>>((ref) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return [];
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return List<String>.from(doc.data()?['interests'] ?? []);
 });

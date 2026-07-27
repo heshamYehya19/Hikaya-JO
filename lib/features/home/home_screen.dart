@@ -22,6 +22,7 @@ class HomeScreen extends ConsumerWidget {
     final destinationsAsync = ref.watch(allDestinationsProvider);
     final latestJourneyAsync = ref.watch(latestJourneyProvider);
     final featuredAsync = ref.watch(featuredDestinationProvider);
+    final interestsAsync = ref.watch(userInterestsProvider);
 
     void goToTab(int index) => ref.read(mainTabIndexProvider.notifier).state = index;
 
@@ -88,15 +89,16 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           );
                         }
+                        final personalized = _personalize(destinations, interestsAsync.valueOrNull ?? []);
                         return ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          itemCount: destinations.length,
+                          itemCount: personalized.length,
                           separatorBuilder: (_, __) => const SizedBox(width: 12),
                           itemBuilder: (_, i) => DestinationCard(
-                            destination: destinations[i],
+                            destination: personalized[i],
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => DestinationDetailScreen(destinationId: destinations[i].id),
+                                builder: (_) => DestinationDetailScreen(destinationId: personalized[i].id),
                               ),
                             ),
                           ),
@@ -294,4 +296,28 @@ class _ContinueJourneyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Loose interest→type mapping for a first pass at personalization.
+/// Photography has no strong match to historical/natural/cultural, so it's
+/// left out on purpose rather than forced onto one — it just won't bias
+/// the sort. Swap this for a real per-destination tags field once there
+/// are enough destinations for it to be worth the schema change.
+const _interestToTypes = {
+  'History': ['historical'],
+  'Culture': ['cultural'],
+  'Food': ['cultural'],
+  'Nature': ['natural'],
+  'Adventure': ['natural'],
+};
+
+List<Destination> _personalize(List<Destination> destinations, List<String> interests) {
+  if (interests.isEmpty) return destinations;
+
+  final matchedTypes = interests.expand((i) => _interestToTypes[i] ?? const <String>[]).toSet();
+  if (matchedTypes.isEmpty) return destinations;
+
+  final matched = destinations.where((d) => matchedTypes.contains(d.type)).toList();
+  final rest = destinations.where((d) => !matchedTypes.contains(d.type)).toList();
+  return [...matched, ...rest];
 }

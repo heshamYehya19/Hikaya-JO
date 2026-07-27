@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
+import '../../core/services/profile_setup_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +41,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
-      if (mounted) context.goNamed('home');
+      if (mounted) {
+        final route = await ProfileSetupService().resolvePostAuthRoute();
+        context.goNamed(route);
+      }
     } on FirebaseAuthException catch (e) {
       setState(() => _errorMessage = ref.read(authServiceProvider).getErrorMessage(e));
     } catch (e) {
