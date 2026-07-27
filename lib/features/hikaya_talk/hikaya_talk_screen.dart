@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
 import '../../providers/translation_provider.dart';
 import '../../models/talk_language.dart';
@@ -131,11 +132,17 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
         if (e.toString().contains('503') || e.toString().contains('UNAVAILABLE')) {
           _translatedText = AppLocale.of(context).t('talk_service_busy');
         } else {
-          _translatedText = 'RAW ERROR: $e';
+          _translatedText = "Couldn't translate that — please try again";
         }
         _isTranslating = false;
       });
     }
+  }
+
+  Future<void> _replay() async {
+    if (_translatedText.isEmpty) return;
+    await _tts.setLanguage(_theirLanguage.ttsLocale);
+    await _tts.speak(_translatedText);
   }
 
   void _swapLanguages() {
@@ -161,12 +168,32 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(t('talk_title'))),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 18),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t('talk_title'), style: AppTypography.headline2.copyWith(fontSize: 20)),
+                        const Text('Break the language barrier', style: AppTypography.bodySecondary),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
               // Language selectors: "I Speak" / "They Speak"
               Row(
                 children: [
@@ -216,6 +243,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
                     : (_translatedText.isEmpty ? t('talk_translation_placeholder') : _translatedText),
                 isPlaceholder: _translatedText.isEmpty && !_isTranslating,
                 accent: true,
+                onReplay: _translatedText.isEmpty || _isTranslating ? null : _replay,
               ),
 
               const Spacer(),
@@ -263,12 +291,14 @@ class _TranscriptCard extends StatelessWidget {
   final String text;
   final bool isPlaceholder;
   final bool accent;
+  final VoidCallback? onReplay;
 
   const _TranscriptCard({
     required this.label,
     required this.text,
     required this.isPlaceholder,
     this.accent = false,
+    this.onReplay,
   });
 
   @override
@@ -284,7 +314,17 @@ class _TranscriptCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              if (onReplay != null)
+                GestureDetector(
+                  onTap: onReplay,
+                  child: const Icon(Icons.volume_up_rounded, size: 18, color: AppColors.teal),
+                ),
+            ],
+          ),
           const SizedBox(height: 6),
           Text(
             text,
