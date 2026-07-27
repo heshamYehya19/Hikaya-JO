@@ -18,10 +18,14 @@ class HikayaTalkScreen extends ConsumerStatefulWidget {
   ConsumerState<HikayaTalkScreen> createState() => _HikayaTalkScreenState();
 }
 
-class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
+class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with SingleTickerProviderStateMixin {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
   int _requestId = 0;
+
+  late final AnimationController _pulseController;
+  bool _micPressed = false;
+  double _swapTurns = 0;
 
   TalkLanguage _myLanguage = kTalkLanguages[0]; // English, until the saved default loads
   TalkLanguage _theirLanguage = kTalkLanguages[1]; // Arabic
@@ -35,6 +39,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
     _initSpeech();
     _loadSavedLanguages();
   }
@@ -147,6 +152,7 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
   void _swapLanguages() {
     setState(() {
+      _swapTurns += 1;
       final temp = _myLanguage;
       _myLanguage = _theirLanguage;
       _theirLanguage = temp;
@@ -157,9 +163,32 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _speech.stop();
     _tts.stop();
     super.dispose();
+  }
+
+  Widget _pulseRing(double phase) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final progress = (_pulseController.value + phase) % 1.0;
+        final scale = 1.0 + progress * 0.9;
+        final opacity = _isListening ? (1.0 - progress).clamp(0.0, 1.0) * 0.35 : 0.0;
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: opacity,
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.error),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -210,7 +239,12 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
                   ),
                   IconButton(
                     onPressed: _swapLanguages,
-                    icon: const Icon(Icons.swap_horiz, color: AppColors.deepTeal),
+                    icon: AnimatedRotation(
+                      turns: _swapTurns,
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOutBack,
+                      child: const Icon(Icons.swap_horiz, color: AppColors.deepTeal),
+                    ),
                   ),
                   Expanded(
                     child: LanguagePicker(
@@ -248,27 +282,46 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> {
 
               const Spacer(),
 
-              // Mic button
+              // Mic button with animated listening rings
               GestureDetector(
+                onTapDown: (_) => setState(() => _micPressed = true),
+                onTapUp: (_) => setState(() => _micPressed = false),
+                onTapCancel: () => setState(() => _micPressed = false),
                 onTap: _isTranslating ? null : (_isListening ? _stopListening : _startListening),
-                child: Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening ? AppColors.error : AppColors.deepTeal,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isListening ? AppColors.error : AppColors.deepTeal).withOpacity(0.3),
-                        blurRadius: 16,
-                        spreadRadius: 4,
+                child: SizedBox(
+                  width: 130,
+                  height: 130,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _pulseRing(0.0),
+                      _pulseRing(0.5),
+                      AnimatedScale(
+                        scale: _micPressed ? 0.92 : 1.0,
+                        duration: const Duration(milliseconds: 120),
+                        curve: Curves.easeOut,
+                        child: Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isListening ? AppColors.error : AppColors.deepTeal,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (_isListening ? AppColors.error : AppColors.deepTeal).withOpacity(0.35),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                            color: AppColors.background,
+                            size: 36,
+                          ),
+                        ),
                       ),
                     ],
-                  ),
-                  child: Icon(
-                    _isListening ? Icons.stop : Icons.mic,
-                    color: AppColors.background,
-                    size: 36,
                   ),
                 ),
               ),
@@ -326,12 +379,23 @@ class _TranscriptCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              color: isPlaceholder ? AppColors.textSecondary : AppColors.textPrimary,
-              fontStyle: isPlaceholder ? FontStyle.italic : FontStyle.normal,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(animation),
+                child: child,
+              ),
+            ),
+            child: Text(
+              text,
+              key: ValueKey(text),
+              style: TextStyle(
+                fontSize: 16,
+                color: isPlaceholder ? AppColors.textSecondary : AppColors.textPrimary,
+                fontStyle: isPlaceholder ? FontStyle.italic : FontStyle.normal,
+              ),
             ),
           ),
         ],
