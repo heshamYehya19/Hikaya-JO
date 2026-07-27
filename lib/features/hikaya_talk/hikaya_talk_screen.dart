@@ -202,18 +202,22 @@ class _HikayaTalkScreenState extends ConsumerState<HikayaTalkScreen> with Single
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Column(
+              Row(
                 children: [
-                  Text(
-                    t('talk_title'),
-                    textAlign: TextAlign.center,
-                    style: AppTypography.headline2.copyWith(fontSize: 20, color: AppColors.deepTeal),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 18),
+                    padding: EdgeInsets.zero,
                   ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Break the language barrier',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.bodySecondary,
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t('talk_title'), style: AppTypography.headline2.copyWith(fontSize: 20)),
+                        const Text('Break the language barrier', style: AppTypography.bodySecondary),
+                      ],
+                    ),
                   ),
                 ],
               ),
