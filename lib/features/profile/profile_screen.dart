@@ -4,15 +4,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/journey.dart';
-import '../../models/talk_language.dart';
+import '../../models/destination.dart';
 import '../../providers/journey_provider.dart';
-import '../../widgets/language_picker.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
 import '../../core/services/offline_service.dart';
+import '../../providers/main_tab_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -25,10 +26,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   List<Journey> _journeys = [];
   bool _isLoading = true;
 
+  List<Journey> _downloadedJourneys = [];
+  bool _isLoadingDownloaded = true;
+
+  Map<String, Destination> _destinationMap = {};
+
   @override
   void initState() {
     super.initState();
     _loadJourneys();
+    _loadDownloadedJourneys();
+    _loadDestinations();
+  }
+
+  Future<void> _loadDestinations() async {
+    final all = await JourneyService().fetchAllDestinations();
+    if (!mounted) return;
+    setState(() => _destinationMap = {for (var d in all) d.id: d});
   }
 
   Future<void> _loadJourneys() async {
@@ -48,11 +62,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
 
-    // Offline, or the online fetch failed — show whatever's downloaded locally
     final cached = offlineService.getCachedJourneys();
     setState(() {
       _journeys = cached;
       _isLoading = false;
+    });
+  }
+
+  /// Always reads straight from the local Hive cache, online or not — this
+  /// is what actually answers "what's downloaded on this device", separate
+  /// from _loadJourneys() above which shows all journeys when online.
+  Future<void> _loadDownloadedJourneys() async {
+    final cached = OfflineService().getCachedJourneys();
+    setState(() {
+      _downloadedJourneys = cached;
+      _isLoadingDownloaded = false;
     });
   }
 
@@ -62,8 +86,78 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    ref.read(mainTabIndexProvider.notifier).state = 0;
     await FirebaseAuth.instance.signOut();
     if (mounted) context.goNamed('login');
+  }
+
+  void _openSettings(String appLanguage, String? userId) {
+    final t = AppLocale.of(context).t;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Settings', style: AppTypography.headline2.copyWith(fontSize: 18)),
+              const SizedBox(height: 20),
+              Text(t('profile_app_language'), style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(t('profile_app_language_subtitle'), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AppLanguageOption(
+                      label: 'English',
+                      selected: appLanguage == 'en',
+                      onTap: () => FirebaseFirestore.instance.collection('users').doc(userId).update({'appLanguage': 'en'}),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AppLanguageOption(
+                      label: 'العربية',
+                      selected: appLanguage == 'ar',
+                      onTap: () => FirebaseFirestore.instance.collection('users').doc(userId).update({'appLanguage': 'ar'}),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    _logout();
+                  },
+                  icon: const Icon(Icons.logout, color: AppColors.error),
+                  label: const Text('Log Out', style: TextStyle(color: AppColors.error)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.error)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _badgeIcon(String badgeName) {
+    final n = badgeName.toLowerCase();
+    if (n.contains('explor')) return Icons.explore_outlined;
+    if (n.contains('pilgrim') || n.contains('mosque')) return Icons.mosque_outlined;
+    if (n.contains('gem') || n.contains('hidden')) return Icons.diamond_outlined;
+    if (n.contains('travel') || n.contains('buoyant') || n.contains('water')) return Icons.water_outlined;
+    if (n.contains('history')) return Icons.account_balance_outlined;
+    if (n.contains('adventure') || n.contains('hik')) return Icons.hiking_outlined;
+    return Icons.emoji_events_outlined;
   }
 
   @override
@@ -74,12 +168,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(t('profile_title')),
-        actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
-        ],
-      ),
       body: userId == null
           ? Center(child: Text(t('profile_not_logged_in')))
           : StreamBuilder<DocumentSnapshot>(
@@ -90,9 +178,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final badges = List<String>.from(data['badges'] ?? []);
           final visited = List<String>.from(data['visitedLocations'] ?? []);
           final name = data['name'] ?? user?.email ?? 'Traveler';
-          final myLanguage = talkLanguageFromCode(data['myLanguage'] as String?);
-          final theirLanguage = talkLanguageFromCode(data['theirLanguage'] as String?, fallback: kTalkLanguages[1]);
           final appLanguage = (data['appLanguage'] as String?) ?? 'en';
+          final level = (coins / 100).floor() + 1; // derived, not stored — purely a display touch
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -102,157 +189,165 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor: AppColors.deepTeal,
-                        child: Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(color: AppColors.background, fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                            Text(user?.email ?? '', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                          ],
-                        ),
+                      Text(t('profile_title'), style: AppTypography.headline2.copyWith(fontSize: 20)),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => _openSettings(appLanguage, userId),
+                        icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(child: _StatCard(value: '$coins', label: t('profile_coins'), icon: Icons.monetization_on_outlined)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(value: '${badges.length}', label: t('profile_badges'), icon: Icons.emoji_events_outlined)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(value: '${visited.length}', label: t('profile_visited'), icon: Icons.place_outlined)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RewardsBadgesScreen()),
-                      ),
-                      icon: const Icon(Icons.emoji_events_outlined),
-                      label: Text(t('profile_view_all_badges')),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: AppColors.deepTeal,
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: const TextStyle(color: AppColors.background, fontSize: 30, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        const SizedBox(height: 2),
+                        Text(user?.email ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.duneGold.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.duneGold.withOpacity(0.4)),
+                          ),
+                          child: Text(
+                            'Traveler Level $level',
+                            style: const TextStyle(color: AppColors.duneGold, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Text(t('profile_app_language'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
-                  const SizedBox(height: 4),
-                  Text(t('profile_app_language_subtitle'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.duneLight),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(child: _StatItem(value: '$coins', label: t('profile_coins'))),
+                        const _StatDivider(),
+                        Expanded(child: _StatItem(value: '${badges.length}', label: t('profile_badges'))),
+                        const _StatDivider(),
+                        Expanded(child: _StatItem(value: '${visited.length}', label: t('profile_visited'))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: _AppLanguageOption(
-                          label: 'English',
-                          selected: appLanguage == 'en',
-                          onTap: () => FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .update({'appLanguage': 'en'}),
+                      Text('Achievements', style: AppTypography.headline2.copyWith(fontSize: 18)),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RewardsBadgesScreen()),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _AppLanguageOption(
-                          label: 'العربية',
-                          selected: appLanguage == 'ar',
-                          onTap: () => FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .update({'appLanguage': 'ar'}),
-                        ),
+                        child: Text(t('profile_view_all_badges')),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  Text(t('profile_talk_languages'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
-                  const SizedBox(height: 4),
-                  Text(t('profile_talk_languages_subtitle'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: LanguagePicker(
-                          label: t('profile_i_speak'),
-                          language: myLanguage,
-                          onChanged: (lang) => FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .update({'myLanguage': lang.translateCode}),
+                  const SizedBox(height: 8),
+                  badges.isEmpty
+                      ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text('No badges yet — complete a Hikaya Hunt challenge to earn one', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  )
+                      : SizedBox(
+                    height: 90,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: badges.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 14),
+                      itemBuilder: (_, i) => SizedBox(
+                        width: 68,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceElevated,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.duneGold.withOpacity(0.4)),
+                              ),
+                              child: Icon(_badgeIcon(badges[i]), color: AppColors.duneGold, size: 24),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              badges[i],
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: LanguagePicker(
-                          label: t('profile_they_speak'),
-                          language: theirLanguage,
-                          onChanged: (lang) => FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(userId)
-                              .update({'theirLanguage': lang.translateCode}),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 28),
-                  Text(t('profile_your_journeys'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18)),
+                  Text(t('profile_your_journeys'), style: AppTypography.headline2.copyWith(fontSize: 18)),
                   const SizedBox(height: 12),
                   _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator(color: AppColors.deepTeal))
                       : _journeys.isEmpty
                       ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text(t('profile_no_journeys'),
-                        style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
                   )
                       : Column(
-                    children: _journeys.map((journey) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: GestureDetector(
-                          onTap: () => _openJourney(journey),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.duneLight),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.map_outlined, color: AppColors.deepTeal),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('${journey.stops.length} ${t('unit_stops')} · ${(journey.totalDurationMinutes / 60).toStringAsFixed(1)}${t('unit_hours')[0]}',
-                                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      Text(
-                                        journey.stops.map((s) => s.destinationName).join(', '),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    children: _journeys.map((journey) => _JourneyRow(
+                      journey: journey,
+                      destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
+                      onTap: () => _openJourney(journey),
+                    )).toList(),
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      const Icon(Icons.download_done_rounded, color: AppColors.deepTeal, size: 20),
+                      const SizedBox(width: 8),
+                      Text('Downloaded Journeys', style: AppTypography.headline2.copyWith(fontSize: 18)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Saved on this device — available even without a connection',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  _isLoadingDownloaded
+                      ? const Center(child: CircularProgressIndicator(color: AppColors.deepTeal))
+                      : _downloadedJourneys.isEmpty
+                      ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  )
+                      : Column(
+                    children: _downloadedJourneys.map((journey) => _JourneyRow(
+                      journey: journey,
+                      destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
+                      onTap: () => _openJourney(journey),
+                      accent: true,
+                    )).toList(),
                   ),
                 ],
               ),
@@ -260,6 +355,73 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _JourneyRow extends StatelessWidget {
+  final Journey journey;
+  final Destination? destination;
+  final VoidCallback onTap;
+  final bool accent;
+  const _JourneyRow({required this.journey, required this.destination, required this.onTap, this.accent = false});
+
+  String _formatDate(DateTime d) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = destination?.imageAt(2);
+    final title = journey.stops.isNotEmpty ? '${journey.stops.first.destinationName} Adventure' : 'Journey';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: accent ? AppColors.deepTeal.withOpacity(0.06) : AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent ? AppColors.deepTeal.withOpacity(0.3) : AppColors.duneLight),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: imageUrl != null
+                      ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+                      : _fallback(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(_formatDate(journey.createdAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: AppColors.surfaceElevated,
+      child: const Icon(Icons.map_outlined, color: AppColors.duneGold, size: 20),
     );
   }
 }
@@ -277,18 +439,14 @@ class _AppLanguageOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? AppColors.deepTeal.withOpacity(0.15) : AppColors.surface,
+          color: selected ? AppColors.deepTeal.withOpacity(0.15) : AppColors.background,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: selected ? AppColors.deepTeal : AppColors.duneLight),
         ),
         child: Center(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: selected ? AppColors.deepTeal : AppColors.textPrimary,
-            ),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: selected ? AppColors.deepTeal : AppColors.textPrimary),
           ),
         ),
       ),
@@ -296,29 +454,28 @@ class _AppLanguageOption extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatItem extends StatelessWidget {
   final String value;
   final String label;
-  final IconData icon;
-  const _StatCard({required this.value, required this.label, required this.icon});
+  const _StatItem({required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.duneLight),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.deepTeal, size: 20),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-        ],
-      ),
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.deepTeal)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      ],
     );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 32, color: AppColors.duneLight);
   }
 }

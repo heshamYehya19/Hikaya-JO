@@ -125,6 +125,12 @@ class AppStrings {
     'hunt_rewards_coins_earned': 'Coins Earned',
     'hunt_rewards_badges_heading': 'Badges',
     'hunt_rewards_no_badges': 'Complete challenges to earn badges',
+    'hunt_status_completed': 'Challenge Completed',
+
+    //profile
+    'profile_downloaded_journeys': 'Downloaded Journeys',
+    'profile_downloaded_journeys_subtitle': 'Saved on this device — available even without a connection',
+    'profile_no_downloaded_journeys': 'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
   };
 
   static const Map<String, String> ar = {
@@ -247,5 +253,12 @@ class AppStrings {
     'hunt_rewards_coins_earned': 'عملة مكتسبة',
     'hunt_rewards_badges_heading': 'الأوسمة',
     'hunt_rewards_no_badges': 'أكمل التحديات لكسب الأوسمة',
+    'hunt_status_completed': 'التحدي مكتمل',
+
+
+    //profile
+    'profile_downloaded_journeys': 'الرحلات المحمّلة',
+    'profile_downloaded_journeys_subtitle': 'محفوظة على هذا الجهاز — متاحة حتى بدون اتصال بالإنترنت',
+    'profile_no_downloaded_journeys': 'لا توجد رحلات محمّلة بعد — اضغط على "تنزيل للعمل دون اتصال" في أي رحلة لحفظها هنا',
   };
 }

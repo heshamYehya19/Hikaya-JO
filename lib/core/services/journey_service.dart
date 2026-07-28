@@ -7,6 +7,7 @@ import '../../models/journey.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'offline_service.dart';
+import 'dart:async';
 
 class JourneyService {
   late final GenerativeModel _model;
@@ -55,15 +56,17 @@ class JourneyService {
     final online = await offlineService.isOnline();
 
     if (!online) {
-      final cachedIds = Hive.box<String>('offline_destinations').keys;
-      return cachedIds
-          .map((id) => offlineService.getCachedDestination(id as String))
-          .whereType<Destination>()
-          .toList();
+      return offlineService.getAllCachedDestinations();
     }
 
     final snapshot = await _firestore.collection('destinations').get();
-    return snapshot.docs.map((doc) => Destination.fromMap(doc.id, doc.data())).toList();
+    final destinations = snapshot.docs.map((doc) => Destination.fromMap(doc.id, doc.data())).toList();
+
+    // Best-effort background refresh of the offline catalog — don't block
+    // the UI on this, and don't let a caching hiccup break the online path.
+    unawaited(offlineService.cacheAllDestinations(destinations).catchError((_) {}));
+
+    return destinations;
   }
 
   Future<Journey> generateJourney({
