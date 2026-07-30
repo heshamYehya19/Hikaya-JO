@@ -93,7 +93,13 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
       }
 
-      ref.read(journeyServiceProvider).saveJourney(journey).catchError((e) {
+      ref.read(journeyServiceProvider).saveJourney(journey).then((_) {
+        if (!mounted) return;
+        // Only refresh after the write actually lands — invalidating
+        // immediately would just refetch the same stale list.
+        ref.invalidate(latestJourneyProvider);
+        ref.invalidate(userJourneysProvider);
+      }).catchError((e) {
         debugPrint('Failed to save journey: $e');
       });
     } catch (e) {

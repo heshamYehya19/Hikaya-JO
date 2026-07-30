@@ -20,7 +20,10 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocale.of(context).t;
     final user = FirebaseAuth.instance.currentUser;
-    final greetingName = user?.email?.split('@').first ?? 'there';
+    final nameAsync = ref.watch(userNameProvider);
+    final greetingName = nameAsync.valueOrNull?.trim().isNotEmpty == true
+        ? nameAsync.valueOrNull!
+        : user?.email?.split('@').first ?? 'there';
     final destinationsAsync = ref.watch(allDestinationsProvider);
     final latestJourneyAsync = ref.watch(latestJourneyProvider);
     final featuredAsync = ref.watch(featuredDestinationProvider);

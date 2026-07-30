@@ -5,6 +5,7 @@ import '../models/destination.dart';
 import 'story_guide_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/services/offline_service.dart';
 
 final journeyServiceProvider = Provider<JourneyService>((ref) => JourneyService());
 
@@ -38,6 +39,25 @@ final userInterestsProvider = FutureProvider<List<String>>((ref) async {
   return List<String>.from(doc.data()?['interests'] ?? []);
 });
 
+/// All of the user's saved journeys, newest first — falls back to the
+/// offline cache if there's no connection. Used by Profile's "Your
+/// Journeys" list. Kept as its own provider (rather than local State)
+/// so it can be invalidated in one place right after a new journey is
+/// saved — see journey_planner_input_screen.dart's _generate().
+final userJourneysProvider = FutureProvider<List<Journey>>((ref) async {
+  final offlineService = OfflineService();
+  final online = await offlineService.isOnline();
+
+  if (online) {
+    try {
+      return await ref.read(journeyServiceProvider).fetchUserJourneys();
+    } catch (_) {
+      // fall through to offline cache below
+    }
+  }
+  return offlineService.getCachedJourneys();
+});
+
 /// Destination IDs the user has actually visited — via completing a
 /// Hikaya Hunt challenge there, or listening to a story in person via
 /// Story Mode. Used by Home's "Continue Your Journey" card to show real
@@ -47,4 +67,13 @@ final userVisitedLocationsProvider = FutureProvider<List<String>>((ref) async {
   if (userId == null) return [];
   final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
   return List<String>.from(doc.data()?['visitedLocations'] ?? []);
+});
+
+/// The user's display name from their Firestore profile doc — used by
+/// Home's greeting instead of guessing something from their email.
+final userNameProvider = FutureProvider<String?>((ref) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return null;
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return doc.data()?['name'] as String?;
 });
