@@ -18,6 +18,7 @@ import '../hikaya_hunt/challenge_list_screen.dart';
 import '../hikaya_talk/hikaya_talk_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../widgets/offline_banner.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -129,6 +130,17 @@ class _MainShellState extends ConsumerState<MainShell> {
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => StoryModeScreen(destination: destination)));
               },
             ),
+          if (kDebugMode)
+            Positioned(
+              right: 16,
+              bottom: 90,
+              child: FloatingActionButton.small(
+                heroTag: 'debug_arrival',
+                backgroundColor: AppColors.error,
+                onPressed: _debugTriggerArrival,
+                child: const Icon(Icons.location_on, color: Colors.white),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -146,5 +158,13 @@ class _MainShellState extends ConsumerState<MainShell> {
         ],
       ),
     );
+  }
+  void _debugTriggerArrival() async {
+    final journey = ref.read(currentJourneyProvider);
+    if (journey == null || journey.stops.isEmpty) return;
+    final allDestinations = await JourneyService().fetchAllDestinations();
+    final destinationMap = {for (var d in allDestinations) d.id: d};
+    final first = destinationMap[journey.stops.first.destinationId];
+    if (first != null && mounted) setState(() => _arrivedDestination = first);
   }
 }

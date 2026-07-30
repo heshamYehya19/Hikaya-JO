@@ -10,24 +10,6 @@ class StoryGuideService {
   final _firestore = FirebaseFirestore.instance;
 
   StoryGuideService() {
-    /// Awards a small bonus for listening to [destination]'s story while
-    /// actually at the location. Idempotent — returns false without
-    /// re-awarding if this destination's story reward was already claimed.
-    Future<bool> awardStoryBonus(Destination destination, {int coins = 10}) async {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return false;
-
-      final userRef = _firestore.collection('users').doc(userId);
-      final userDoc = await userRef.get();
-      final claimed = List<String>.from(userDoc.data()?['storyRewardsClaimed'] ?? []);
-      if (claimed.contains(destination.id)) return false;
-
-      await userRef.update({
-        'coins': FieldValue.increment(coins),
-        'storyRewardsClaimed': FieldValue.arrayUnion([destination.id]),
-      });
-      return true;
-    }
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
     final modelName = dotenv.env['GEMINI_MODEL'] ?? 'gemini-2.5-flash-lite';
     _model = GenerativeModel(model: modelName, apiKey: apiKey);
@@ -80,4 +62,23 @@ Context: ${destination.description}
       }
     }
   }
+  /// Awards a small bonus for listening to [destination]'s story while
+  /// actually at the location. Idempotent — returns false without
+  /// re-awarding if this destination's story reward was already claimed.
+  Future<bool> awardStoryBonus(Destination destination, {int coins = 10}) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return false;
+
+    final userRef = _firestore.collection('users').doc(userId);
+    final userDoc = await userRef.get();
+    final claimed = List<String>.from(userDoc.data()?['storyRewardsClaimed'] ?? []);
+    if (claimed.contains(destination.id)) return false;
+
+    await userRef.update({
+      'coins': FieldValue.increment(coins),
+      'storyRewardsClaimed': FieldValue.arrayUnion([destination.id]),
+    });
+    return true;
+  }
+
 }
