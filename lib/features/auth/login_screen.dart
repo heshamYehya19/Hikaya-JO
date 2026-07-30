@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../core/services/profile_setup_service.dart';
@@ -38,9 +39,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authServiceProvider).signIn(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
       if (mounted) {
         final route = await ProfileSetupService().resolvePostAuthRoute();
         context.goNamed(route);
@@ -51,6 +52,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _errorMessage = 'Something went wrong: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final controller = TextEditingController(text: _emailController.text.trim());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Reset Password', style: TextStyle(color: AppColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "We'll send a password reset link to your email.",
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(controller: controller, label: 'Email', keyboardType: TextInputType.emailAddress),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Send Link'),
+          ),
+        ],
+      ),
+    );
+
+    if (email == null || email.isEmpty || !mounted) return;
+
+    try {
+      await ref.read(authServiceProvider).sendPasswordReset(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Password reset link sent to $email')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.read(authServiceProvider).getErrorMessage(e))),
+        );
+      }
     }
   }
 
@@ -67,9 +115,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 24),
-                Text('Welcome Back', style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: AppColors.deepTeal)),
+                Text('Welcome Back', style: AppTypography.headline1.copyWith(fontSize: 28)),
                 const SizedBox(height: 8),
-                Text('Sign in to continue your journey', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                const Text('Sign in to continue your journey', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                 const SizedBox(height: 32),
                 AppTextField(
                   controller: _emailController,
@@ -91,21 +139,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _showForgotPasswordDialog,
+                    child: const Text('Forgot Password?', style: TextStyle(color: AppColors.deepTeal, fontSize: 13)),
+                  ),
+                ),
                 if (_errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(_errorMessage!, style: TextStyle(color: AppColors.error, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 14)),
                 ],
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     child: _isLoading
                         ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
                         : const Text('Log In'),
                   ),
                 ),
@@ -115,13 +170,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () => context.goNamed('signup'),
                     child: RichText(
                       text: TextSpan(
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                         children: [
                           const TextSpan(text: "Don't have an account? "),
-                          TextSpan(
-                            text: 'Sign Up',
-                            style: TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600),
-                          ),
+                          TextSpan(text: 'Sign Up', style: TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
