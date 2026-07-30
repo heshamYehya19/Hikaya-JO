@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
@@ -5,6 +6,7 @@ import '../../core/localization/app_locale.dart';
 import '../../core/services/app_prefs_service.dart';
 import '../../core/services/arrival_watcher_service.dart';
 import '../../core/services/journey_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
 import '../../providers/main_tab_provider.dart';
@@ -18,7 +20,6 @@ import '../hikaya_hunt/challenge_list_screen.dart';
 import '../hikaya_talk/hikaya_talk_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../widgets/offline_banner.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -27,7 +28,7 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
   static const _screens = [
     HomeScreen(),
     JourneyPlannerInputScreen(),
@@ -41,10 +42,13 @@ class _MainShellState extends ConsumerState<MainShell> {
   final _arrivalWatcher = ArrivalWatcherService();
   Destination? _arrivedDestination;
   String? _watchedJourneyId;
+  AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     if (!AppPrefsService().hasSeenFeatureTour) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _showTour = true);
@@ -52,14 +56,16 @@ class _MainShellState extends ConsumerState<MainShell> {
     }
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycleState = state;
+  }
+
   void _finishTour() {
     AppPrefsService().markFeatureTourSeen();
     setState(() => _showTour = false);
   }
 
-  /// Starts/stops arrival watching to track whichever journey is currently
-  /// active. Only re-resolves stops and restarts the watcher when the
-  /// journey actually changes, so this is safe to call on every build.
   Future<void> _syncArrivalWatcher(Journey? journey) async {
     if (journey == null) {
       if (_watchedJourneyId != null) {
@@ -81,12 +87,29 @@ class _MainShellState extends ConsumerState<MainShell> {
       stopsWithCoordinates: stops,
       onArrival: (destination) {
         if (mounted) setState(() => _arrivedDestination = destination);
+
+        if (_lifecycleState != AppLifecycleState.resumed) {
+          NotificationService.showArrivalNotification(
+            destinationId: destination.id,
+            destinationName: destination.name,
+          );
+        }
       },
     );
   }
 
+  void _debugTriggerArrival() async {
+    final journey = ref.read(currentJourneyProvider);
+    if (journey == null || journey.stops.isEmpty) return;
+    final allDestinations = await JourneyService().fetchAllDestinations();
+    final destinationMap = {for (var d in allDestinations) d.id: d};
+    final first = destinationMap[journey.stops.first.destinationId];
+    if (first != null && mounted) setState(() => _arrivedDestination = first);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _arrivalWatcher.stop();
     super.dispose();
   }
@@ -158,13 +181,5 @@ class _MainShellState extends ConsumerState<MainShell> {
         ],
       ),
     );
-  }
-  void _debugTriggerArrival() async {
-    final journey = ref.read(currentJourneyProvider);
-    if (journey == null || journey.stops.isEmpty) return;
-    final allDestinations = await JourneyService().fetchAllDestinations();
-    final destinationMap = {for (var d in allDestinations) d.id: d};
-    final first = destinationMap[journey.stops.first.destinationId];
-    if (first != null && mounted) setState(() => _arrivedDestination = first);
   }
 }
