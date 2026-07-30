@@ -78,6 +78,12 @@ Context: ${destination.description}
       'coins': FieldValue.increment(coins),
       'storyRewardsClaimed': FieldValue.arrayUnion([destination.id]),
     });
+
+    await userRef.update({
+      'coins': FieldValue.increment(coins),
+      'storyRewardsClaimed': FieldValue.arrayUnion([destination.id]),
+      'visitedLocations': FieldValue.arrayUnion([destination.id]),
+    });
     return true;
   }
 

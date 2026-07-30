@@ -1,10 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
 import '../../models/destination.dart';
+import '../../models/journey.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../widgets/destination_card.dart';
@@ -23,7 +24,7 @@ class HomeScreen extends ConsumerWidget {
     final destinationsAsync = ref.watch(allDestinationsProvider);
     final latestJourneyAsync = ref.watch(latestJourneyProvider);
     final featuredAsync = ref.watch(featuredDestinationProvider);
-    final interestsAsync = ref.watch(userInterestsProvider);
+    final visitedAsync = ref.watch(userVisitedLocationsProvider);
 
     void goToTab(int index) => ref.read(mainTabIndexProvider.notifier).state = index;
 
@@ -48,11 +49,14 @@ class HomeScreen extends ConsumerWidget {
                   latestJourneyAsync.when(
                     data: (journey) {
                       if (journey == null) return const SizedBox.shrink();
+                      final destinationMap = {for (var d in destinationsAsync.valueOrNull ?? <Destination>[]) d.id: d};
+                      final firstDestination = journey.stops.isNotEmpty ? destinationMap[journey.stops.first.destinationId] : null;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 24),
                         child: _ContinueJourneyCard(
-                          stopCount: journey.stops.length,
-                          totalHours: (journey.totalDurationMinutes / 60),
+                          journey: journey,
+                          destination: firstDestination,
+                          visitedLocations: visitedAsync.valueOrNull ?? const [],
                           onContinue: () {
                             ref.read(currentJourneyProvider.notifier).state = journey;
                             Navigator.of(context).push(
@@ -90,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           );
                         }
-                        final personalized = _personalize(destinations, interestsAsync.valueOrNull ?? []);
+                        final personalized = _personalize(destinations, ref.watch(userInterestsProvider).valueOrNull ?? []);
                         return ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: personalized.length,
@@ -147,7 +151,7 @@ class _HeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocale.of(context).t;
-    final hasImage = featured != null && featured!.imageUrls.isNotEmpty;
+    final hasImage = featured?.imageAt(0) != null;
 
     return Stack(
       fit: StackFit.passthrough,
@@ -155,7 +159,7 @@ class _HeroHeader extends StatelessWidget {
         if (hasImage)
           Positioned.fill(
             child: CachedNetworkImage(
-              imageUrl: featured!.imageUrls.first,
+              imageUrl: featured!.imageAt(0)!,
               fit: BoxFit.cover,
               errorWidget: (_, __, ___) => const SizedBox.shrink(),
             ),
@@ -252,58 +256,145 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-/// Shows the user's most recent saved journey. There's no completion-percent
-/// field on the Journey model yet, so this shows real stop count / duration
-/// instead of a fabricated progress bar — add a `completedStops` field to
-/// the model if you want the literal "45% Completed" bar from the reference.
-class _ContinueJourneyCard extends StatelessWidget {
+/// Now shows a real photo, a genuine progress bar (visited stops ÷ total
+/// stops, computed from userVisitedLocationsProvider — not a fabricated
+/// percentage), a nudging arrow animation, and press feedback on tap.
+class _ContinueJourneyCard extends StatefulWidget {
   const _ContinueJourneyCard({
-    required this.stopCount,
-    required this.totalHours,
+    required this.journey,
+    required this.destination,
+    required this.visitedLocations,
     required this.onContinue,
   });
 
-  final int stopCount;
-  final double totalHours;
+  final Journey journey;
+  final Destination? destination;
+  final List<String> visitedLocations;
   final VoidCallback onContinue;
+
+  @override
+  State<_ContinueJourneyCard> createState() => _ContinueJourneyCardState();
+}
+
+class _ContinueJourneyCardState extends State<_ContinueJourneyCard> with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+  late final AnimationController _arrowController;
+
+  @override
+  void initState() {
+    super.initState();
+    _arrowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _arrowController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocale.of(context).t;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.duneLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(t('home_continue_journey'),
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
-          const SizedBox(height: 4),
-          Text(
-            '$stopCount ${t('unit_stops')} · ${totalHours.toStringAsFixed(1)} ${t('unit_hours')}',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+    final journey = widget.journey;
+    final stopIds = journey.stops.map((s) => s.destinationId).toSet();
+    final visitedCount = stopIds.where((id) => widget.visitedLocations.contains(id)).length;
+    final totalStops = journey.stops.length;
+    final progress = totalStops == 0 ? 0.0 : visitedCount / totalStops;
+    final hasImage = widget.destination?.imageAt(4) != null;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onContinue,
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            children: [
+              if (hasImage)
+                Positioned.fill(
+                  child: CachedNetworkImage(imageUrl: widget.destination!.imageAt(4)!, fit: BoxFit.cover),
+                )
+              else
+                const Positioned.fill(child: ColoredBox(color: AppColors.surface)),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.background.withOpacity(0.3), AppColors.background.withOpacity(0.93)],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            t('home_continue_journey'),
+                            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16),
+                          ),
+                        ),
+                        AnimatedBuilder(
+                          animation: _arrowController,
+                          builder: (context, child) => Transform.translate(
+                            offset: Offset(_arrowController.value * 4, 0),
+                            child: child,
+                          ),
+                          child: const Icon(Icons.arrow_forward_rounded, color: AppColors.duneGold, size: 20),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${journey.stops.length} ${t('unit_stops')} · ${(journey.totalDurationMinutes / 60).toStringAsFixed(1)} ${t('unit_hours')}',
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: progress),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => LinearProgressIndicator(
+                          value: value,
+                          minHeight: 6,
+                          backgroundColor: AppColors.background.withOpacity(0.5),
+                          valueColor: const AlwaysStoppedAnimation(AppColors.duneGold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      totalStops == 0 ? '' : '$visitedCount / $totalStops stops explored',
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(onPressed: widget.onContinue, child: Text(t('home_continue_button'))),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(onPressed: onContinue, child: Text(t('home_continue_button'))),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Loose interest→type mapping for a first pass at personalization.
-/// Photography has no strong match to historical/natural/cultural, so it's
-/// left out on purpose rather than forced onto one — it just won't bias
-/// the sort. Swap this for a real per-destination tags field once there
-/// are enough destinations for it to be worth the schema change.
 const _interestToTypes = {
   'History': ['historical'],
   'Culture': ['cultural'],

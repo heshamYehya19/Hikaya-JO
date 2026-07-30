@@ -37,3 +37,14 @@ final userInterestsProvider = FutureProvider<List<String>>((ref) async {
   final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
   return List<String>.from(doc.data()?['interests'] ?? []);
 });
+
+/// Destination IDs the user has actually visited — via completing a
+/// Hikaya Hunt challenge there, or listening to a story in person via
+/// Story Mode. Used by Home's "Continue Your Journey" card to show real
+/// progress, not a fabricated percentage.
+final userVisitedLocationsProvider = FutureProvider<List<String>>((ref) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return [];
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return List<String>.from(doc.data()?['visitedLocations'] ?? []);
+});
