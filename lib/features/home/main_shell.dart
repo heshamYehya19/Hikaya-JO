@@ -3,8 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
 import '../../core/services/app_prefs_service.dart';
+import '../../core/services/arrival_watcher_service.dart';
+import '../../core/services/journey_service.dart';
+import '../../models/destination.dart';
+import '../../models/journey.dart';
 import '../../providers/main_tab_provider.dart';
+import '../../providers/journey_provider.dart';
 import '../../widgets/feature_tour_overlay.dart';
+import '../../widgets/arrival_reveal_overlay.dart';
+import '../journey_planner/story_mode_screen.dart';
 import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
 import '../hikaya_hunt/challenge_list_screen.dart';
@@ -30,12 +37,14 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   bool _showTour = false;
 
+  final _arrivalWatcher = ArrivalWatcherService();
+  Destination? _arrivedDestination;
+  String? _watchedJourneyId;
+
   @override
   void initState() {
     super.initState();
     if (!AppPrefsService().hasSeenFeatureTour) {
-      // Defer until after the first frame so the nav bar is actually laid
-      // out before the overlay positions itself against it.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _showTour = true);
       });
@@ -47,10 +56,48 @@ class _MainShellState extends ConsumerState<MainShell> {
     setState(() => _showTour = false);
   }
 
+  /// Starts/stops arrival watching to track whichever journey is currently
+  /// active. Only re-resolves stops and restarts the watcher when the
+  /// journey actually changes, so this is safe to call on every build.
+  Future<void> _syncArrivalWatcher(Journey? journey) async {
+    if (journey == null) {
+      if (_watchedJourneyId != null) {
+        await _arrivalWatcher.stop();
+        _watchedJourneyId = null;
+      }
+      return;
+    }
+    if (_watchedJourneyId == journey.id) return;
+
+    _watchedJourneyId = journey.id;
+    _arrivalWatcher.resetNotified();
+
+    final allDestinations = await JourneyService().fetchAllDestinations();
+    final destinationMap = {for (var d in allDestinations) d.id: d};
+    final stops = journey.stops.map((s) => destinationMap[s.destinationId]).whereType<Destination>().toList();
+
+    await _arrivalWatcher.start(
+      stopsWithCoordinates: stops,
+      onArrival: (destination) {
+        if (mounted) setState(() => _arrivedDestination = destination);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _arrivalWatcher.stop();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(mainTabIndexProvider);
     final t = AppLocale.of(context).t;
+
+    ref.listen<Journey?>(currentJourneyProvider, (previous, next) {
+      _syncArrivalWatcher(next);
+    });
 
     return Scaffold(
       body: Stack(
@@ -65,32 +112,22 @@ class _MainShellState extends ConsumerState<MainShell> {
             FeatureTourOverlay(
               onFinished: _finishTour,
               steps: const [
-                TourStep(
-                  icon: Icons.home_outlined,
-                  title: 'Home Base',
-                  description: "Your gateway to Jordan's best-kept secrets — trending spots, and pick up right where you left off.",
-                ),
-                TourStep(
-                  icon: Icons.map_outlined,
-                  title: 'Plan a Journey',
-                  description: "Tell us what excites you, and let Hikaya craft the perfect route through Jordan's history, nature, and flavor.",
-                ),
-                TourStep(
-                  icon: Icons.emoji_events_outlined,
-                  title: 'Hikaya Hunt',
-                  description: 'Turn every landmark into an adventure! Track down hidden gates, snap your proof, and watch the coins roll in.',
-                ),
-                TourStep(
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Hikaya Talk',
-                  description: "Never get lost in translation — speak freely and we'll bridge the gap in real time, both ways.",
-                ),
-                TourStep(
-                  icon: Icons.person_outline,
-                  title: 'Your Story',
-                  description: 'Every coin, badge, and journey you conquer — all tracked in one place, just for you.',
-                ),
+                TourStep(icon: Icons.home_outlined, title: 'Home Base', description: "Your gateway to Jordan's best-kept secrets — trending spots, and pick up right where you left off."),
+                TourStep(icon: Icons.map_outlined, title: 'Plan a Journey', description: "Tell us what excites you, and let Hikaya craft the perfect route through Jordan's history, nature, and flavor."),
+                TourStep(icon: Icons.emoji_events_outlined, title: 'Hikaya Hunt', description: 'Turn every landmark into an adventure! Track down hidden gates, snap your proof, and watch the coins roll in.'),
+                TourStep(icon: Icons.chat_bubble_outline, title: 'Hikaya Talk', description: "Never get lost in translation — speak freely and we'll bridge the gap in real time, both ways."),
+                TourStep(icon: Icons.person_outline, title: 'Your Story', description: 'Every coin, badge, and journey you conquer — all tracked in one place, just for you.'),
               ],
+            ),
+          if (_arrivedDestination != null)
+            ArrivalRevealOverlay(
+              destination: _arrivedDestination!,
+              onDismiss: () => setState(() => _arrivedDestination = null),
+              onListen: () {
+                final destination = _arrivedDestination!;
+                setState(() => _arrivedDestination = null);
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => StoryModeScreen(destination: destination)));
+              },
             ),
         ],
       ),
