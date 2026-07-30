@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Local (device-level) app preferences — specifically the language choice
 /// from first launch, which needs somewhere to live before a Firestore
@@ -28,6 +29,16 @@ class AppPrefsService {
   String? get theirLanguageCode => _box.get(_theirLanguageKey);
   String? get appLanguageCode => _box.get(_appLanguageKey);
 
+  /// Scoped per-account (uid), not per-device — same class of bug as the
+  /// downloaded-journeys leak: the tour only ever makes sense as "has this
+  /// specific account seen it", not "has this phone ever seen it".
+  String get _tourKeyForCurrentUser {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    return 'hasSeenFeatureTour::$uid';
+  }
+
+  bool get hasSeenFeatureTour => _box.containsKey(_tourKeyForCurrentUser);
+
   Future<void> setLanguages({required String myLanguageCode, required String theirLanguageCode}) async {
     await _box.put(_myLanguageKey, myLanguageCode);
     await _box.put(_theirLanguageKey, theirLanguageCode);
@@ -35,5 +46,9 @@ class AppPrefsService {
 
   Future<void> setAppLanguage(String code) async {
     await _box.put(_appLanguageKey, code);
+  }
+
+  Future<void> markFeatureTourSeen() async {
+    await _box.put(_tourKeyForCurrentUser, 'true');
   }
 }
