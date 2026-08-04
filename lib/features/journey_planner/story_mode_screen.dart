@@ -5,19 +5,21 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/services/story_guide_service.dart';
 import '../../models/destination.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/hunt_service.dart';
+import '../../providers/main_tab_provider.dart';
 
 enum _PlaybackState { idle, loading, playing, paused, finished }
 
-class StoryModeScreen extends StatefulWidget {
+class StoryModeScreen extends ConsumerStatefulWidget {
   final Destination destination;
   const StoryModeScreen({super.key, required this.destination});
 
   @override
-  State<StoryModeScreen> createState() => _StoryModeScreenState();
+  ConsumerState<StoryModeScreen> createState() => _StoryModeScreenState();
 }
 
-class _StoryModeScreenState extends State<StoryModeScreen> with SingleTickerProviderStateMixin {
-  final FlutterTts _tts = FlutterTts();
+class _StoryModeScreenState extends ConsumerState<StoryModeScreen> with SingleTickerProviderStateMixin {  final FlutterTts _tts = FlutterTts();
   final StoryGuideService _storyService = StoryGuideService();
   late final AnimationController _waveController;
 
@@ -25,6 +27,8 @@ class _StoryModeScreenState extends State<StoryModeScreen> with SingleTickerProv
   int _spokenChars = 0;
   _PlaybackState _state = _PlaybackState.idle;
   bool _bonusAwarded = false;
+  int _unlockedChallengeCount = 0;
+  bool _showUnlockBanner = false;
 
   @override
   void initState() {
@@ -78,15 +82,33 @@ class _StoryModeScreenState extends State<StoryModeScreen> with SingleTickerProv
     await _tts.speak(_story);
   }
 
-  Future<void> _awardBonus() async {
-    final awarded = await _storyService.awardStoryBonus(widget.destination);
-    if (mounted && awarded) {
-      setState(() => _bonusAwarded = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🪙 +10 Coins — thanks for listening in person!')),
-      );
-    }
+Future<void> _awardBonus() async {
+  final awarded = await _storyService.awardStoryBonus(widget.destination);
+  if (!mounted) return;
+
+  if (awarded) {
+    setState(() => _bonusAwarded = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('🪙 +10 Coins — thanks for listening in person!')),
+    );
   }
+
+  // Check what just got unlocked at this destination, regardless of
+  // whether the coin bonus itself was already claimed on a past visit.
+  final allChallenges = await HuntService().fetchChallenges();
+  final here = allChallenges.where((c) => c.destinationId == widget.destination.id).length;
+  if (!mounted || here == 0) return;
+
+  setState(() {
+    _unlockedChallengeCount = here;
+    _showUnlockBanner = true;
+  });
+}
+
+void _goToHunt() {
+  ref.read(mainTabIndexProvider.notifier).state = 2;
+  Navigator.of(context).pop();
+}
 
   @override
   void dispose() {
@@ -181,6 +203,47 @@ class _StoryModeScreenState extends State<StoryModeScreen> with SingleTickerProv
                   },
                   style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
+                if (_showUnlockBanner)
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) => Opacity(
+                      opacity: value.clamp(0.0, 1.0),
+                      child: Transform.translate(offset: Offset(0, (1 - value) * 20), child: child),
+                    ),
+                    child: GestureDetector(
+                      onTap: _goToHunt,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.duneGold.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.duneGold),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lock_open_rounded, color: AppColors.duneGold, size: 26),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$_unlockedChallengeCount Challenge${_unlockedChallengeCount == 1 ? '' : 's'} Unlocked!',
+                                    style: const TextStyle(color: AppColors.duneGold, fontWeight: FontWeight.w700, fontSize: 15),
+                                  ),
+                                  const Text('Tap to go hunt them down', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.duneGold, size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 32),
               ],
             ),
