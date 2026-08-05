@@ -10,6 +10,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/services/offline_service.dart';
 import 'core/services/app_prefs_service.dart';
 
+import 'core/services/notification_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -17,6 +19,7 @@ void main() async {
   await Hive.initFlutter();
   await OfflineService.init();
   await AppPrefsService.init();
+  await NotificationService.init();
   runApp(const ProviderScope(child: HikayaJoApp()));
 }
 

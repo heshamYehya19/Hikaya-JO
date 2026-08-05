@@ -4,6 +4,7 @@ import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
 import '../../providers/journey_provider.dart';
 import 'itinerary_screen.dart';
+import '../../core/services/notification_service.dart';
 
 class JourneyPlannerInputScreen extends ConsumerStatefulWidget {
   const JourneyPlannerInputScreen({super.key});
@@ -93,7 +94,19 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
       }
 
-      ref.read(journeyServiceProvider).saveJourney(journey).catchError((e) {
+      ref.read(journeyServiceProvider).saveJourney(journey).then((_) {
+        if (!mounted) return;
+        ref.invalidate(latestJourneyProvider);
+        ref.invalidate(userJourneysProvider);
+
+        if (journey.stops.isNotEmpty) {
+          NotificationService.scheduleJourneyReminder(
+            journeyId: journey.id,
+            firstStopName: journey.stops.first.destinationName,
+            remainingStops: journey.stops.length - 1,
+          );
+        }
+      }).catchError((e) {
         debugPrint('Failed to save journey: $e');
       });
     } catch (e) {

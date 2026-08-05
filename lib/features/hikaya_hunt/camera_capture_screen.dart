@@ -10,17 +10,22 @@ import '../../core/localization/app_locale.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/photo_verification_service.dart';
 import '../../core/services/landmark_verification_service.dart';
+import '../../core/services/location_service.dart';
 import '../../models/challenge.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/services/notification_service.dart';
+import '../../providers/journey_provider.dart';
 
-class CameraCaptureScreen extends StatefulWidget {
+class CameraCaptureScreen extends ConsumerStatefulWidget {
   final Challenge challenge;
   const CameraCaptureScreen({super.key, required this.challenge});
 
   @override
-  State<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
+  ConsumerState<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
 }
 
-class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
+class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
   final _huntService = HuntService();
   final _landmarkService = LandmarkVerificationService();
   final _verificationService = PhotoVerificationService();
@@ -35,6 +40,25 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
     final image = await picker.pickImage(source: source, imageQuality: 70);
     if (image != null) {
       setState(() => _photo = File(image.path));
+    }
+  }
+
+  Future<bool> _confirmStillWithinRange() async {
+    final locationService = LocationService();
+    final hasPermission = await locationService.ensureLocationPermission();
+    if (!hasPermission) return false;
+
+    try {
+      final position = await locationService.getCurrentPosition();
+      final distance = locationService.distanceToTarget(
+        userLat: position.latitude,
+        userLng: position.longitude,
+        targetLat: widget.challenge.latitude,
+        targetLng: widget.challenge.longitude,
+      );
+      return distance <= widget.challenge.radiusMeters;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -93,6 +117,17 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         ),
       );
       if (proceedAnyway != true) return;
+
+      // "Submit Anyway" no longer just trusts the tap — it re-confirms
+      // GPS proximity right now. That's the one thing genuinely hard to
+      // fake, unlike an AI's uncertain read on an ambiguous photo.
+      final stillHere = await _confirmStillWithinRange();
+      if (!stillHere) {
+        if (mounted) {
+          setState(() => _error = "Doesn't look like you're still at ${widget.challenge.destinationName} — move closer and try again.");
+        }
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
@@ -111,6 +146,24 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
         _isSubmitting = false;
         if (!awarded) _error = t('hunt_camera_already_completed');
       });
+
+      // Same check as Story Mode: if this challenge's destination was the
+      // last unvisited stop on the currently active journey, the "come
+      // back and finish" reminder is now pointless — cancel it.
+      final activeJourney = ref.read(currentJourneyProvider);
+      if (activeJourney != null) {
+        final stopIds = activeJourney.stops.map((s) => s.destinationId).toSet();
+        if (stopIds.contains(widget.challenge.destinationId)) {
+          final userId = FirebaseAuth.instance.currentUser?.uid;
+          if (userId != null) {
+            final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+            final visited = Set<String>.from(doc.data()?['visitedLocations'] ?? []);
+            if (stopIds.every(visited.contains)) {
+              await NotificationService.cancelJourneyReminder(activeJourney.id);
+            }
+          }
+        }
+      }
     } catch (e) {
       setState(() {
         _error = '${t('hunt_camera_submit_failed')} $e';

@@ -33,4 +33,5 @@ class AuthService {
         return 'Something went wrong. Please try again.';
     }
   }
+  Future<void> sendPasswordReset(String email) => _auth.sendPasswordResetEmail(email: email);
 }

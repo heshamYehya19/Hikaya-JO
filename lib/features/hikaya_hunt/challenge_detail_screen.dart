@@ -9,6 +9,7 @@ import '../../models/challenge.dart';
 import '../../models/destination.dart';
 import 'camera_capture_screen.dart';
 import '../../core/services/hunt_service.dart';
+import 'find_your_way_screen.dart';
 
 class ChallengeDetailScreen extends StatefulWidget {
   final Challenge challenge;
@@ -205,6 +206,23 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                           child: _isChecking
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
                               : Text(t('hunt_check_location')),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => FindYourWayScreen(challenge: challenge)),
+                          ),
+                          icon: const Icon(Icons.explore_outlined),
+                          label: const Text('Find Your Way'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.deepTeal,
+                            side: const BorderSide(color: AppColors.deepTeal),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                          ),
                         ),
                       ),
                       if (_isWithinRange) ...[

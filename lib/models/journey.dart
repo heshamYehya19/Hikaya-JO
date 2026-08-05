@@ -46,6 +46,8 @@ class Journey {
   final int totalDurationMinutes;
   final double totalCost;
   final DateTime createdAt;
+  final DateTime? startedAt;
+
   factory Journey.fromMap(String id, Map<String, dynamic> map) {
     DateTime parsedDate;
     final rawDate = map['createdAt'];
@@ -57,6 +59,14 @@ class Journey {
       parsedDate = DateTime.now();
     }
 
+    DateTime? parsedStartedAt;
+    final rawStartedAt = map['startedAt'];
+    if (rawStartedAt is Timestamp) {
+      parsedStartedAt = rawStartedAt.toDate();
+    } else if (rawStartedAt is int) {
+      parsedStartedAt = DateTime.fromMillisecondsSinceEpoch(rawStartedAt);
+    }
+
     return Journey(
       id: id,
       stops: (map['stops'] as List)
@@ -65,6 +75,7 @@ class Journey {
       totalDurationMinutes: map['totalDurationMinutes'] ?? 0,
       totalCost: (map['totalCost'] ?? 0).toDouble(),
       createdAt: parsedDate,
+      startedAt: parsedStartedAt,
     );
   }
 
@@ -73,6 +84,7 @@ class Journey {
     'totalDurationMinutes': totalDurationMinutes,
     'totalCost': totalCost,
     'createdAt': createdAt.millisecondsSinceEpoch,
+    if (startedAt != null) 'startedAt': startedAt!.millisecondsSinceEpoch,
   };
 
   Journey({
@@ -81,5 +93,6 @@ class Journey {
     required this.totalDurationMinutes,
     required this.totalCost,
     required this.createdAt,
+    this.startedAt,
   });
 }

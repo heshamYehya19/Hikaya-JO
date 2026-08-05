@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
@@ -12,7 +13,6 @@ import '../../models/destination.dart';
 import '../../providers/journey_provider.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
-import '../../core/services/offline_service.dart';
 import '../../providers/main_tab_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -23,19 +23,11 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  List<Journey> _journeys = [];
-  bool _isLoading = true;
-
-  List<Journey> _downloadedJourneys = [];
-  bool _isLoadingDownloaded = true;
-
   Map<String, Destination> _destinationMap = {};
 
   @override
   void initState() {
     super.initState();
-    _loadJourneys();
-    _loadDownloadedJourneys();
     _loadDestinations();
   }
 
@@ -43,41 +35,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final all = await JourneyService().fetchAllDestinations();
     if (!mounted) return;
     setState(() => _destinationMap = {for (var d in all) d.id: d});
-  }
-
-  Future<void> _loadJourneys() async {
-    final offlineService = OfflineService();
-    final online = await offlineService.isOnline();
-
-    if (online) {
-      try {
-        final journeys = await JourneyService().fetchUserJourneys();
-        setState(() {
-          _journeys = journeys;
-          _isLoading = false;
-        });
-        return;
-      } catch (_) {
-        // fall through to offline cache below
-      }
-    }
-
-    final cached = offlineService.getCachedJourneys();
-    setState(() {
-      _journeys = cached;
-      _isLoading = false;
-    });
-  }
-
-  /// Always reads straight from the local Hive cache, online or not — this
-  /// is what actually answers "what's downloaded on this device", separate
-  /// from _loadJourneys() above which shows all journeys when online.
-  Future<void> _loadDownloadedJourneys() async {
-    final cached = OfflineService().getCachedJourneys();
-    setState(() {
-      _downloadedJourneys = cached;
-      _isLoadingDownloaded = false;
-    });
   }
 
   void _openJourney(Journey journey) {
@@ -165,6 +122,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final t = AppLocale.of(context).t;
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid;
+    final journeysAsync = ref.watch(userJourneysProvider);
+    final downloadedAsync = ref.watch(userDownloadedJourneysProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -303,19 +262,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 28),
                   Text(t('profile_your_journeys'), style: AppTypography.headline2.copyWith(fontSize: 18)),
                   const SizedBox(height: 12),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.deepTeal))
-                      : _journeys.isEmpty
-                      ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
-                  )
-                      : Column(
-                    children: _journeys.map((journey) => _JourneyRow(
-                      journey: journey,
-                      destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
-                      onTap: () => _openJourney(journey),
-                    )).toList(),
+                  journeysAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator(color: AppColors.deepTeal)),
+                    error: (_, __) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
+                    ),
+                    data: (journeys) => journeys.isEmpty
+                        ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
+                    )
+                        : Column(
+                      children: journeys.map((journey) => _JourneyRow(
+                        journey: journey,
+                        destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
+                        onTap: () => _openJourney(journey),
+                      )).toList(),
+                    ),
                   ),
                   const SizedBox(height: 28),
                   Row(
@@ -331,23 +295,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
-                  _isLoadingDownloaded
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.deepTeal))
-                      : _downloadedJourneys.isEmpty
-                      ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text(
-                      'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
-                      style: TextStyle(color: AppColors.textSecondary),
+                  downloadedAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator(color: AppColors.deepTeal)),
+                    error: (_, __) => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
-                  )
-                      : Column(
-                    children: _downloadedJourneys.map((journey) => _JourneyRow(
-                      journey: journey,
-                      destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
-                      onTap: () => _openJourney(journey),
-                      accent: true,
-                    )).toList(),
+                    data: (downloaded) => downloaded.isEmpty
+                        ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    )
+                        : Column(
+                      children: downloaded.map((journey) => _JourneyRow(
+                        journey: journey,
+                        destination: _destinationMap[journey.stops.isNotEmpty ? journey.stops.first.destinationId : ''],
+                        onTap: () => _openJourney(journey),
+                        accent: true,
+                      )).toList(),
+                    ),
                   ),
                 ],
               ),
@@ -395,7 +367,7 @@ class _JourneyRow extends StatelessWidget {
                   width: 48,
                   height: 48,
                   child: imageUrl != null
-                      ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback())
+                      ? CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _fallback())
                       : _fallback(),
                 ),
               ),

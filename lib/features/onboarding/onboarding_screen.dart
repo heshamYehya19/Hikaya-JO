@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 
 class OnboardingSlide {
   final IconData icon;
@@ -88,22 +89,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: AppColors.teal.withOpacity(0.12),
-                            shape: BoxShape.circle,
+                        TweenAnimationBuilder<double>(
+                          key: ValueKey(index),
+                          tween: Tween(begin: 0.7, end: 1),
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutBack,
+                          builder: (context, value, child) => Transform.scale(scale: value, child: child),
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              color: AppColors.teal.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(slide.icon, size: 64, color: AppColors.deepTeal),
                           ),
-                          child: Icon(slide.icon, size: 64, color: AppColors.deepTeal),
                         ),
                         const SizedBox(height: 40),
                         Text(
                           slide.title,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppColors.deepTeal,
-                          ),
+                          style: AppTypography.headline1.copyWith(fontSize: 24, color: AppColors.deepTeal),
                         ),
                         const SizedBox(height: 16),
                         Text(

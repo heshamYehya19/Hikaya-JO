@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/theme/typography.dart';
 import '../../core/services/app_prefs_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
@@ -45,8 +46,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         password: _passwordController.text,
       );
 
-      // Create the user's Firestore profile doc
-      // Create the user's Firestore profile doc
       final prefs = AppPrefsService();
       await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
         'name': _nameController.text.trim(),
@@ -63,8 +62,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Next in the build order: Travel Profile Setup screen — routing to
-      // 'home' placeholder for now until that screen exists
       if (mounted) context.goNamed('interestsSetup');
     } on FirebaseAuthException catch (e) {
       setState(() => _errorMessage = ref.read(authServiceProvider).getErrorMessage(e));
@@ -88,9 +85,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 24),
-                Text('Create Account', style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: AppColors.deepTeal)),
+                Text('Create Account', style: AppTypography.headline1.copyWith(fontSize: 28)),
                 const SizedBox(height: 8),
-                Text('Start your Hikaya JO story', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                const Text('Start your Hikaya JO story', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                 const SizedBox(height: 32),
                 AppTextField(
                   controller: _nameController,
@@ -121,7 +118,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
-                  Text(_errorMessage!, style: TextStyle(color: AppColors.error, fontSize: 14)),
+                  Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 14)),
                 ],
                 const SizedBox(height: 28),
                 SizedBox(
@@ -143,13 +140,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     onPressed: () => context.goNamed('login'),
                     child: RichText(
                       text: TextSpan(
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                         children: [
                           const TextSpan(text: 'Already have an account? '),
-                          TextSpan(
-                            text: 'Log In',
-                            style: TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600),
-                          ),
+                          TextSpan(text: 'Log In', style: TextStyle(color: AppColors.deepTeal, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
