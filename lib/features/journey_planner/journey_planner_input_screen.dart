@@ -4,6 +4,7 @@ import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
 import '../../providers/journey_provider.dart';
 import 'itinerary_screen.dart';
+import '../../core/services/notification_service.dart';
 
 class JourneyPlannerInputScreen extends ConsumerStatefulWidget {
   const JourneyPlannerInputScreen({super.key});
@@ -95,10 +96,16 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
 
       ref.read(journeyServiceProvider).saveJourney(journey).then((_) {
         if (!mounted) return;
-        // Only refresh after the write actually lands — invalidating
-        // immediately would just refetch the same stale list.
         ref.invalidate(latestJourneyProvider);
         ref.invalidate(userJourneysProvider);
+
+        if (journey.stops.isNotEmpty) {
+          NotificationService.scheduleJourneyReminder(
+            journeyId: journey.id,
+            firstStopName: journey.stops.first.destinationName,
+            remainingStops: journey.stops.length - 1,
+          );
+        }
       }).catchError((e) {
         debugPrint('Failed to save journey: $e');
       });

@@ -8,6 +8,10 @@ import '../../models/destination.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/hunt_service.dart';
 import '../../providers/main_tab_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/services/notification_service.dart';
+import '../../providers/journey_provider.dart';
 
 enum _PlaybackState { idle, loading, playing, paused, finished }
 
@@ -103,6 +107,23 @@ Future<void> _awardBonus() async {
     _unlockedChallengeCount = here;
     _showUnlockBanner = true;
   });
+
+  // If this was the last unvisited stop on the currently active
+  // journey, there's no need to nudge them to come back — cancel it.
+  final activeJourney = ref.read(currentJourneyProvider);
+  if (activeJourney != null) {
+    final stopIds = activeJourney.stops.map((s) => s.destinationId).toSet();
+    if (stopIds.contains(widget.destination.id)) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final visited = Set<String>.from(doc.data()?['visitedLocations'] ?? []);
+        if (stopIds.every(visited.contains)) {
+          await NotificationService.cancelJourneyReminder(activeJourney.id);
+        }
+      }
+    }
+  }
 }
 
 void _goToHunt() {
