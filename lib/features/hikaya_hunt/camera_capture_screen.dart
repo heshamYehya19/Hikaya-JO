@@ -10,6 +10,7 @@ import '../../core/localization/app_locale.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/photo_verification_service.dart';
 import '../../core/services/landmark_verification_service.dart';
+import '../../core/services/location_service.dart';
 import '../../models/challenge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,6 +40,25 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
     final image = await picker.pickImage(source: source, imageQuality: 70);
     if (image != null) {
       setState(() => _photo = File(image.path));
+    }
+  }
+
+  Future<bool> _confirmStillWithinRange() async {
+    final locationService = LocationService();
+    final hasPermission = await locationService.ensureLocationPermission();
+    if (!hasPermission) return false;
+
+    try {
+      final position = await locationService.getCurrentPosition();
+      final distance = locationService.distanceToTarget(
+        userLat: position.latitude,
+        userLng: position.longitude,
+        targetLat: widget.challenge.latitude,
+        targetLng: widget.challenge.longitude,
+      );
+      return distance <= widget.challenge.radiusMeters;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -97,6 +117,17 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
         ),
       );
       if (proceedAnyway != true) return;
+
+      // "Submit Anyway" no longer just trusts the tap — it re-confirms
+      // GPS proximity right now. That's the one thing genuinely hard to
+      // fake, unlike an AI's uncertain read on an ambiguous photo.
+      final stillHere = await _confirmStillWithinRange();
+      if (!stillHere) {
+        if (mounted) {
+          setState(() => _error = "Doesn't look like you're still at ${widget.challenge.destinationName} — move closer and try again.");
+        }
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
