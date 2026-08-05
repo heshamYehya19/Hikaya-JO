@@ -8,16 +8,18 @@ import '../../core/services/location_service.dart';
 import '../../core/services/directions_service.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/journey_provider.dart';
 
-class JourneyMapScreen extends StatefulWidget {
+class JourneyMapScreen extends ConsumerStatefulWidget {
   final Journey journey;
   const JourneyMapScreen({super.key, required this.journey});
 
   @override
-  State<JourneyMapScreen> createState() => _JourneyMapScreenState();
+  ConsumerState<JourneyMapScreen> createState() => _JourneyMapScreenState();
 }
 
-class _JourneyMapScreenState extends State<JourneyMapScreen> {
+class _JourneyMapScreenState extends ConsumerState<JourneyMapScreen> {
   static const String _darkMapStyle = '''
 [
   {"elementType": "geometry", "stylers": [{"color": "#17171a"}]},
@@ -51,6 +53,8 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
   Position? _userPosition;
   bool _isLoading = true;
   bool _isLoadingRoute = false;
+
+  bool _optimisticStart = false;
 
   String? _selectedStopName;
   String? _routeDistanceText;
@@ -344,14 +348,38 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: journey.stops.isEmpty
-                          ? null
-                          : () {
-                        final first = journey.stops.first;
+                    child: _isJourneyStarted
+                        ? Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.teal.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: AppColors.teal),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const _LiveDot(),
+                          const SizedBox(width: 10),
+                          Text(
+                            widget.journey.startedAt != null
+                                ? 'In Progress · Started ${_formatStartTime(widget.journey.startedAt!)}'
+                                : 'Journey in Progress',
+                            style: const TextStyle(color: AppColors.teal, fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                        : _PulsingStartButton(
+                      enabled: widget.journey.stops.isNotEmpty,
+                      onTap: () async {
+                        final first = widget.journey.stops.first;
                         _selectStop(first.destinationId, first.destinationName);
+                        setState(() => _optimisticStart = true);
+                        await JourneyService().markJourneyStarted(widget.journey.id);
+                        ref.invalidate(latestJourneyProvider);
+                        ref.invalidate(userJourneysProvider);
                       },
-                      child: const Text('Start Journey'),
                     ),
                   ),
                 ],
@@ -359,6 +387,128 @@ class _JourneyMapScreenState extends State<JourneyMapScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+  bool get _isJourneyStarted => _optimisticStart || widget.journey.startedAt != null;
+
+  String _formatStartTime(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+}
+
+/// A "live" pulsing dot — solid center dot with an expanding, fading ring —
+/// used anywhere something is genuinely happening in real time right now.
+class _LiveDot extends StatefulWidget {
+  const _LiveDot();
+
+  @override
+  State<_LiveDot> createState() => _LiveDotState();
+}
+
+class _LiveDotState extends State<_LiveDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return SizedBox(
+          width: 16,
+          height: 16,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Opacity(
+                opacity: (1 - _controller.value).clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: 1 + (_controller.value * 1.4),
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
+                  ),
+                ),
+              ),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(color: AppColors.teal, shape: BoxShape.circle),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The "Start Journey" button itself, with a gentle breathing glow to
+/// invite the tap — same pulsing language used on the arrival reveal's CTA.
+class _PulsingStartButton extends StatefulWidget {
+  final bool enabled;
+  final Future<void> Function() onTap;
+  const _PulsingStartButton({required this.enabled, required this.onTap});
+
+  @override
+  State<_PulsingStartButton> createState() => _PulsingStartButtonState();
+}
+
+class _PulsingStartButtonState extends State<_PulsingStartButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _isStarting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300))..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    setState(() => _isStarting = true);
+    await widget.onTap();
+    if (mounted) setState(() => _isStarting = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: widget.enabled
+              ? [BoxShadow(color: AppColors.deepTeal.withOpacity(0.25 + _controller.value * 0.2), blurRadius: 14, spreadRadius: 1)]
+              : null,
+        ),
+        child: child,
+      ),
+      child: ElevatedButton(
+        onPressed: (!widget.enabled || _isStarting) ? null : _handleTap,
+        child: _isStarting
+            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
+            : const Text('Start Journey'),
       ),
     );
   }

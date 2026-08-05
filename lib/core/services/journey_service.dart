@@ -38,6 +38,18 @@ class JourneyService {
         .set(journey.toMap());
   }
 
+  Future<void> markJourneyStarted(String journeyId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('journeys')
+        .doc(journeyId)
+        .update({'startedAt': FieldValue.serverTimestamp()});
+  }
+
   Future<List<Journey>> fetchUserJourneys() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return [];
