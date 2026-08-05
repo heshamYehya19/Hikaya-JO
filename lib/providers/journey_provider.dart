@@ -6,6 +6,7 @@ import 'story_guide_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/services/offline_service.dart';
+import '../core/utils/interest_mapping.dart';
 
 final journeyServiceProvider = Provider<JourneyService>((ref) => JourneyService());
 
@@ -23,11 +24,21 @@ final latestJourneyProvider = FutureProvider<Journey?>((ref) async {
   return journeys.isNotEmpty ? journeys.first : null;
 });
 
-/// Home screen hero background. Petra is the featured destination — once
-/// you add its imageUrls in Firestore (see seed_service.dart), this photo
-/// shows up automatically. Reuses the same fetchDestination the detail
-/// screen already calls, rather than adding a duplicate method.
-final featuredDestinationProvider = FutureProvider<Destination?>((ref) {
+/// Home screen hero background — picks a destination matching the user's
+/// interests (see InterestsSetupScreen) that actually has a photo, so the
+/// header feels personalized rather than always showing the same place.
+/// Falls back to Petra if there's no interest match yet, or nothing
+/// matching has a usable image.
+final featuredDestinationProvider = FutureProvider<Destination?>((ref) async {
+  final interests = await ref.watch(userInterestsProvider.future);
+  final destinations = await ref.watch(allDestinationsProvider.future);
+
+  final matchedTypes = matchedDestinationTypes(interests);
+  if (matchedTypes.isNotEmpty) {
+    final match = destinations.where((d) => matchedTypes.contains(d.type) && d.imageAt(0) != null);
+    if (match.isNotEmpty) return match.first;
+  }
+
   return ref.read(storyGuideServiceProvider).fetchDestination('petra');
 });
 /// The interests picked on InterestsSetupScreen — used by Home to

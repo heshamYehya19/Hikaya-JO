@@ -12,6 +12,7 @@ import '../../widgets/destination_card.dart';
 import '../journey_planner/all_destinations_screen.dart';
 import '../journey_planner/destination_detail_screen.dart';
 import '../journey_planner/itinerary_screen.dart';
+import '../../core/utils/interest_mapping.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -398,18 +399,10 @@ class _ContinueJourneyCardState extends State<_ContinueJourneyCard> with SingleT
   }
 }
 
-const _interestToTypes = {
-  'History': ['historical'],
-  'Culture': ['cultural'],
-  'Food': ['cultural'],
-  'Nature': ['natural'],
-  'Adventure': ['natural'],
-};
-
 List<Destination> _personalize(List<Destination> destinations, List<String> interests) {
   if (interests.isEmpty) return destinations;
 
-  final matchedTypes = interests.expand((i) => _interestToTypes[i] ?? const <String>[]).toSet();
+  final matchedTypes = matchedDestinationTypes(interests);
   if (matchedTypes.isEmpty) return destinations;
 
   final matched = destinations.where((d) => matchedTypes.contains(d.type)).toList();
