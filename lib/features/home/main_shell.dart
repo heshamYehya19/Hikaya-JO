@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
 import '../../core/services/app_prefs_service.dart';
@@ -44,16 +46,49 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   String? _watchedJourneyId;
   AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
+  StreamSubscription<User?>? _authSub;
+  String? _lastSeenUid;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Tracks the signed-in account so a sign-out/sign-in (even to a
+    // different account) is detected — token refreshes on the same
+    // account fire this stream too, so only a genuine UID change should
+    // trigger a wipe, not every event.
+    _lastSeenUid = FirebaseAuth.instance.currentUser?.uid;
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      final newUid = user?.uid;
+      if (newUid != _lastSeenUid) {
+        _lastSeenUid = newUid;
+        _invalidateUserScopedProviders();
+      }
+    });
 
     if (!AppPrefsService().hasSeenFeatureTour) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _showTour = true);
       });
     }
+  }
+
+  /// Every provider that depends on "whoever is currently signed in" gets
+  /// wiped here — this is the one place that needs updating when a new
+  /// user-scoped provider gets added later, instead of hunting down every
+  /// screen that reads per-account data.
+  void _invalidateUserScopedProviders() {
+    ref.invalidate(latestJourneyProvider);
+    ref.invalidate(userJourneysProvider);
+    ref.invalidate(userDownloadedJourneysProvider);
+    ref.invalidate(userInterestsProvider);
+    ref.invalidate(userVisitedLocationsProvider);
+    ref.invalidate(userNameProvider);
+
+    // Whatever journey was being actively viewed belonged to the
+    // previous account too — a fresh sign-in shouldn't inherit it.
+    ref.read(currentJourneyProvider.notifier).state = null;
   }
 
   @override
@@ -110,6 +145,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _authSub?.cancel();
     _arrivalWatcher.stop();
     super.dispose();
   }

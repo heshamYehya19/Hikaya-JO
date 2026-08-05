@@ -77,3 +77,7 @@ final userNameProvider = FutureProvider<String?>((ref) async {
   final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
   return doc.data()?['name'] as String?;
 });
+
+final userDownloadedJourneysProvider = FutureProvider<List<Journey>>((ref) async {
+  return OfflineService().getCachedJourneys();
+});
