@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:video_player/video_player.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/services/app_prefs_service.dart';
@@ -14,52 +15,87 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late final VideoPlayerController _controller;
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () async {
-      if (!mounted) return;
+    _controller = VideoPlayerController.asset('assets/videos/splash_logo.mp4')
+      ..setLooping(false)
+      ..setVolume(0) // silent — splash videos shouldn't play audio
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() {}); // rebuild once the first frame is ready to show
+        _controller.play();
+      });
 
-      // First launch ever (no language picked yet) — that comes before
-      // anything else, even for a returning logged-in user on a fresh install.
-      if (!AppPrefsService().hasPickedLanguage) {
-        context.goNamed('languageSelect');
-        return;
-      }
+    // Navigate exactly when the video actually finishes, rather than
+    // guessing a fixed delay that could cut the animation off early or
+    // leave an awkward pause after it ends.
+    _controller.addListener(_checkVideoFinished);
+  }
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final route = await ProfileSetupService().resolvePostAuthRoute();
-        context.goNamed(route);
-      } else {
-        context.goNamed('onboarding');
-      }
-    });
+  void _checkVideoFinished() {
+    if (_hasNavigated) return;
+    final value = _controller.value;
+    if (value.isInitialized &&
+        !value.isPlaying &&
+        value.duration > Duration.zero &&
+        value.position >= value.duration) {
+      _hasNavigated = true;
+      _navigateNext();
+    }
+  }
+
+  Future<void> _navigateNext() async {
+    if (!mounted) return;
+
+    // First launch ever (no language picked yet) — that comes before
+    // anything else, even for a returning logged-in user on a fresh install.
+    if (!AppPrefsService().hasPickedLanguage) {
+      context.goNamed('languageSelect');
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final route = await ProfileSetupService().resolvePostAuthRoute();
+      if (mounted) context.goNamed(route);
+    } else {
+      context.goNamed('onboarding');
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_checkVideoFinished);
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: Center(
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) => Opacity(
-            opacity: value,
-            child: Transform.scale(scale: 0.85 + (value * 0.15), child: child),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo.png', width: 160),
-              const SizedBox(height: 16),
-              Text('Hikaya JO', style: AppTypography.headline1.copyWith(color: AppColors.deepTeal, fontSize: 30)),
-              const SizedBox(height: 8),
-              const Text('Your story of Jordan', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 220,
+              child: _controller.value.isInitialized
+                  ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+                  : const SizedBox(height: 160), // reserves space so nothing jumps once the video loads
+            ),
+            const SizedBox(height: 16),
+            Text('Hikaya JO', style: AppTypography.headline1.copyWith(color: AppColors.deepTeal, fontSize: 30)),
+            const SizedBox(height: 8),
+            const Text('Every Place Has A Story', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+          ],
         ),
       ),
     );
