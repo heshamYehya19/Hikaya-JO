@@ -82,11 +82,24 @@ class ChallengeSeedService {
       rewardCoins: 15,
       badgeName: 'Pilgrim',
     ),
+
   ];
 
   Future<void> seedChallenges() async {
     final batch = _firestore.batch();
     for (final challenge in _challenges) {
+      final ref = _firestore.collection('challenges').doc(challenge.id);
+      batch.set(ref, challenge.toMap());
+    }
+    await batch.commit();
+  }
+
+  /// Safe for adding new challenges — writes each by its own id, only
+  /// ever touches the ones passed in. Won't collide with or overwrite
+  /// the original 7 seeded challenges as long as new ids are unique.
+  Future<void> addChallenges(List<Challenge> challenges) async {
+    final batch = _firestore.batch();
+    for (final challenge in challenges) {
       final ref = _firestore.collection('challenges').doc(challenge.id);
       batch.set(ref, challenge.toMap());
     }

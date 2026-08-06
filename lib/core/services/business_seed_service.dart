@@ -4,6 +4,12 @@ import '../../models/business.dart';
 class BusinessSeedService {
   final _firestore = FirebaseFirestore.instance;
 
+  /// Safe for repeated use — writes exactly one business by its own id,
+  /// never touches any other document.
+  Future<void> addBusiness(Business business) async {
+    await _firestore.collection('businesses').doc(business.id).set(business.toMap());
+  }
+
   final List<Business> _businesses = [
     Business(
       id: 'biz_petra_cafe',

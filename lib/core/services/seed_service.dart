@@ -138,4 +138,12 @@ class SeedService {
     }
     await batch.commit();
   }
+
+  /// Safe for repeated use — writes exactly one destination by its own id,
+  /// never touches any other document. Unlike seedDestinations() (the
+  /// batch method), this can't accidentally overwrite existing
+  /// destinations' data (like manually-added extra imageUrls).
+  Future<void> addDestination(Destination destination) async {
+    await _firestore.collection('destinations').doc(destination.id).set(destination.toMap());
+  }
 }
