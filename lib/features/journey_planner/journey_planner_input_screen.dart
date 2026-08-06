@@ -84,6 +84,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
       final journey = await ref.read(journeyServiceProvider).generateJourney(
         destinations: destinations,
         interests: interestsForPrompt,
+        interestKeys: _selectedInterests.toList(),
         budgetLevel: _budget,
         availableHours: _hours.round(),
         transportMode: _transport,

@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'offline_service.dart';
 import 'dart:async';
+import '../utils/interest_mapping.dart';
 
 class JourneyService {
   late final GenerativeModel _model;
@@ -84,16 +85,25 @@ class JourneyService {
   Future<Journey> generateJourney({
     required List<Destination> destinations,
     required List<String> interests,
+    required List<String> interestKeys, // raw, untranslated — used only for destination filtering
     required String budgetLevel,
     required int availableHours,
     required String transportMode,
     int maxRetries = 3,
   }) async {
-    if (destinations.isEmpty) {
-      throw Exception('No destinations found — did you run the /seed screen?');
-    }
 
-    final destinationsJson = destinations
+    // Only send destinations that plausibly match the user's picked
+    // interests — a smaller prompt means a faster response, and it only
+    // gets more valuable as the destination catalog keeps growing. Falls
+    // back to the full list if filtering leaves too few to build a real
+    // itinerary from (e.g. an interest with no strong type match).
+    final matchedTypes = matchedDestinationTypes(interestKeys);
+    final relevantDestinations = matchedTypes.isEmpty
+        ? destinations
+        : destinations.where((d) => matchedTypes.contains(d.type)).toList();
+    final destinationsForPrompt = relevantDestinations.length >= 5 ? relevantDestinations : destinations;
+
+    final destinationsJson = destinationsForPrompt
         .map((d) => {
       'id': d.id,
       'name': d.name,
