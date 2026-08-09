@@ -13,6 +13,7 @@ import '../journey_planner/all_destinations_screen.dart';
 import '../journey_planner/destination_detail_screen.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../../core/utils/interest_mapping.dart';
+import '../journey_planner/journey_route_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -64,7 +65,7 @@ class HomeScreen extends ConsumerWidget {
                           onContinue: () {
                             ref.read(currentJourneyProvider.notifier).state = journey;
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const ItineraryScreen()),
+                              MaterialPageRoute(builder: (_) => JourneyRouteScreen(journey: journey)),
                             );
                           },
                         ),
