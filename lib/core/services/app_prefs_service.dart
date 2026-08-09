@@ -1,20 +1,11 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Local (device-level) app preferences — specifically the language choice
-/// from first launch, which needs somewhere to live before a Firestore
-/// user doc exists yet (i.e. before signup). Once an account exists,
-/// Firestore is the real source of truth — this is just the bridge for
-/// pre-account state.
-///
-/// appLanguage (this app's UI language, en/ar only) is deliberately
-/// separate from myLanguage/theirLanguage (Hikaya Talk's conversation
-/// languages, any of the 8) — changing one must not silently change the
-/// other.
+/// Local (device-level) app preferences. Currently just the app's UI
+/// language (en/ar), settable from Profile → Settings, plus the
+/// per-account "has this account seen the feature tour" flag.
 class AppPrefsService {
   static const _boxName = 'app_prefs';
-  static const _myLanguageKey = 'myLanguage';
-  static const _theirLanguageKey = 'theirLanguage';
   static const _appLanguageKey = 'appLanguage';
 
   static Future<void> init() async {
@@ -23,10 +14,6 @@ class AppPrefsService {
 
   Box<String> get _box => Hive.box<String>(_boxName);
 
-  bool get hasPickedLanguage => _box.containsKey(_myLanguageKey);
-
-  String? get myLanguageCode => _box.get(_myLanguageKey);
-  String? get theirLanguageCode => _box.get(_theirLanguageKey);
   String? get appLanguageCode => _box.get(_appLanguageKey);
 
   /// Scoped per-account (uid), not per-device — same class of bug as the
@@ -38,11 +25,6 @@ class AppPrefsService {
   }
 
   bool get hasSeenFeatureTour => _box.containsKey(_tourKeyForCurrentUser);
-
-  Future<void> setLanguages({required String myLanguageCode, required String theirLanguageCode}) async {
-    await _box.put(_myLanguageKey, myLanguageCode);
-    await _box.put(_theirLanguageKey, theirLanguageCode);
-  }
 
   Future<void> setAppLanguage(String code) async {
     await _box.put(_appLanguageKey, code);

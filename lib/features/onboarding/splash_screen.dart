@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
-import '../../core/services/app_prefs_service.dart';
 import '../../core/services/profile_setup_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -51,12 +50,6 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigateNext() async {
     if (!mounted) return;
 
-    // First launch ever (no language picked yet) — that comes before
-    // anything else, even for a returning logged-in user on a fresh install.
-    if (!AppPrefsService().hasPickedLanguage) {
-      context.goNamed('languageSelect');
-      return;
-    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
