@@ -211,14 +211,6 @@ class _FindYourWayScreenState extends State<FindYourWayScreen> with SingleTicker
                           boxShadow: [BoxShadow(color: ringColor.withOpacity(0.3), blurRadius: 16, spreadRadius: 1)],
                         ),
                       ),
-                      ...List.generate(4, (i) {
-                        const labels = ['N', 'E', 'S', 'W'];
-                        final angle = (i * 90 - (_heading ?? 0)) * math.pi / 180;
-                        return Transform.translate(
-                          offset: Offset(math.sin(angle) * 110, -math.cos(angle) * 110),
-                          child: Text(labels[i], style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
-                        );
-                      }),
                       _SmoothNeedle(targetAngle: arrowAngle, color: ringColor),
                       // "Found It!" burst — fires once per range-entry via the key.
                       if (_isWithinRange)

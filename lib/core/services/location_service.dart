@@ -17,7 +17,7 @@ class LocationService {
     return true;
   }
 
-  LocationSettings _buildLocationSettings() {
+  LocationSettings _buildOneShotSettings() {
     if (Platform.isAndroid) {
       return AndroidSettings(
         accuracy: LocationAccuracy.high,
@@ -32,14 +32,32 @@ class LocationService {
     );
   }
 
+  // No timeLimit here on purpose — a continuous stream (arrival detection,
+  // the Find Your Way compass) needs to keep listening indefinitely, not
+  // silently die the moment 10 seconds pass without a qualifying move —
+  // e.g. walking slowly, or briefly indoors with weaker GPS reception.
+  LocationSettings _buildStreamSettings() {
+    if (Platform.isAndroid) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        forceLocationManager: true,
+      );
+    }
+    return const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5,
+    );
+  }
+
   Future<Position> getCurrentPosition() {
     return Geolocator.getCurrentPosition(
-      locationSettings: _buildLocationSettings(),
+      locationSettings: _buildOneShotSettings(),
     );
   }
 
   Stream<Position> watchPosition() {
-    return Geolocator.getPositionStream(locationSettings: _buildLocationSettings());
+    return Geolocator.getPositionStream(locationSettings: _buildStreamSettings());
   }
 
   double distanceToTarget({

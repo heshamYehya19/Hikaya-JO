@@ -56,15 +56,14 @@ class _SeedScreenState extends State<SeedScreen> {
     try {
       await SeedService().addDestination(
         Destination(
-          id: 'wadi_mujib',
-          name: 'Wadi Mujib',
-          type: 'natural',
-          latitude: 31.49278,
-          longitude: 35.605,
-          description: "A dramatic 70-kilometer canyon plunging into the Dead Sea, Wadi Mujib is Jordan's premier canyoning destination — wade, swim, and scramble through narrow sandstone gorges and waterfalls within a UNESCO biosphere reserve home to rare wildlife like the Nubian ibex and Syrian wolf.",
-          isLesserKnown: true,
-          avgVisitMinutes: 180,
-          costLevel: 'medium',
+          id: 'roman_theatre_amman',
+          name: 'Roman Theatre',
+          type: 'historical',
+          latitude: 31.951694,
+          longitude: 35.939306,
+          description: 'A 6,000-seat Roman theatre built in the 2nd century CE in honor of Emperor Antoninus Pius, carved into the hillside opposite the Amman Citadel. Still an active cultural venue today, hosting concerts and festivals just as it did nearly 2,000 years ago.',
+          avgVisitMinutes: 75,
+          costLevel: 'low',
           imageUrls: [], // add your uploaded Storage URLs here
         ),
       );
