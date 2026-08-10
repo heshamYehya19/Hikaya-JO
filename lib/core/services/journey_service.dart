@@ -9,6 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'offline_service.dart';
 import 'dart:async';
 import '../utils/interest_mapping.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class JourneyService {
   late final GenerativeModel _model;
@@ -73,11 +74,22 @@ class JourneyService {
     }
 
     final snapshot = await _firestore.collection('destinations').get();
-    final destinations = snapshot.docs.map((doc) => Destination.fromMap(doc.id, doc.data())).toList();
-
+    final destinations = <Destination>[];
+    for (final doc in snapshot.docs) {
+      try {
+        destinations.add(Destination.fromMap(doc.id, doc.data()));
+      } catch (e) {
+        // Don't let one malformed document take down the entire list —
+        // skip it and log which one, so it's fixable in Firestore instead
+        // of silently breaking Home for everyone.
+        debugPrint('⚠️ Skipping malformed destination "${doc.id}": $e');
+      }
+    }
     // Best-effort background refresh of the offline catalog — don't block
     // the UI on this, and don't let a caching hiccup break the online path.
     unawaited(offlineService.cacheAllDestinations(destinations).catchError((_) {}));
+
+    debugPrint('📦 Fetched ${snapshot.docs.length} destination docs, parsed ${destinations.length} successfully');
 
     return destinations;
   }

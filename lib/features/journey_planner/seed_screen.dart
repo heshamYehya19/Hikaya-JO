@@ -256,6 +256,30 @@ class _SeedScreenState extends State<SeedScreen> {
           badgeName: 'Museum Diver',
           difficulty: 'Medium',
         ),
+        Challenge(
+          id: 'hunt_roman_theatre_1',
+          destinationId: 'roman_theatre_amman',
+          destinationName: 'Roman Theatre',
+          title: "The Emperor's Inscription",
+          description: 'Find the Greek inscription on one of the pillars, honoring Emperor Antoninus Pius.',
+          latitude: 31.951694,
+          longitude: 35.939306,
+          rewardCoins: 15,
+          badgeName: 'Inscription Reader',
+          difficulty: 'Easy',
+        ),
+        Challenge(
+          id: 'hunt_roman_theatre_2',
+          destinationId: 'roman_theatre_amman',
+          destinationName: 'Roman Theatre',
+          title: 'Climb to the Gods',
+          description: "Climb to the theatre's highest row of seats — known as \"the gods\" — and see why the view (and the acoustics) are still remarkable nearly 2,000 years later.",
+          latitude: 31.951694,
+          longitude: 35.939306,
+          rewardCoins: 24,
+          badgeName: 'Summit Seeker',
+          difficulty: 'Medium',
+        ),
       ]);
       setState(() => _challengesStatus = '✅ 12 new challenges added');
     } catch (e) {
