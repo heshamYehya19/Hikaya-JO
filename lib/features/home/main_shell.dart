@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/app_prefs_service.dart';
 import '../../core/services/arrival_watcher_service.dart';
 import '../../core/services/journey_service.dart';
@@ -15,6 +15,7 @@ import '../../providers/main_tab_provider.dart';
 import '../../providers/journey_provider.dart';
 import '../../widgets/feature_tour_overlay.dart';
 import '../../widgets/arrival_reveal_overlay.dart';
+import '../../widgets/fade_indexed_stack.dart';
 import '../journey_planner/story_mode_screen.dart';
 import 'home_screen.dart';
 import '../journey_planner/journey_planner_input_screen.dart';
@@ -85,6 +86,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     ref.invalidate(userInterestsProvider);
     ref.invalidate(userVisitedLocationsProvider);
     ref.invalidate(userNameProvider);
+    ref.invalidate(userTravelPrefsProvider);
 
     // Whatever journey was being actively viewed belonged to the
     // previous account too — a fresh sign-in shouldn't inherit it.
@@ -119,27 +121,17 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     final stops = journey.stops.map((s) => destinationMap[s.destinationId]).whereType<Destination>().toList();
 
     await _arrivalWatcher.start(
-      stopsWithCoordinates: stops,
-      onArrival: (destination) {
-        if (mounted) setState(() => _arrivedDestination = destination);
-
-        if (_lifecycleState != AppLifecycleState.resumed) {
-          NotificationService.showArrivalNotification(
-            destinationId: destination.id,
-            destinationName: destination.name,
-          );
-        }
-      },
-    );
-  }
-
-  void _debugTriggerArrival() async {
-    final journey = ref.read(currentJourneyProvider);
-    if (journey == null || journey.stops.isEmpty) return;
-    final allDestinations = await JourneyService().fetchAllDestinations();
-    final destinationMap = {for (var d in allDestinations) d.id: d};
-    final first = destinationMap[journey.stops.first.destinationId];
-    if (first != null && mounted) setState(() => _arrivedDestination = first);
+          stopsWithCoordinates: stops,
+          onArrival: (destination) {
+            if (mounted) setState(() => _arrivedDestination = destination);
+            if (_lifecycleState != AppLifecycleState.resumed) {
+              NotificationService.showArrivalNotification(
+                destinationId: destination.id,
+                destinationName: destination.name,
+              );
+            }
+          },
+        );
   }
 
   @override
@@ -165,7 +157,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
           Column(
             children: [
               const OfflineBanner(),
-              Expanded(child: IndexedStack(index: currentIndex, children: _screens)),
+              Expanded(child: FadeIndexedStack(index: currentIndex, children: _screens)),
             ],
           ),
           if (_showTour)
@@ -186,19 +178,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
               onListen: () {
                 final destination = _arrivedDestination!;
                 setState(() => _arrivedDestination = null);
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => StoryModeScreen(destination: destination)));
+                Navigator.of(context).push(smoothPageRoute(StoryModeScreen(destination: destination)));
               },
-            ),
-          if (kDebugMode)
-            Positioned(
-              right: 16,
-              bottom: 90,
-              child: FloatingActionButton.small(
-                heroTag: 'debug_arrival',
-                backgroundColor: AppColors.error,
-                onPressed: _debugTriggerArrival,
-                child: const Icon(Icons.location_on, color: Colors.white),
-              ),
             ),
         ],
       ),

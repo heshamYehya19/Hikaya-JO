@@ -92,3 +92,23 @@ final userNameProvider = FutureProvider<String?>((ref) async {
 final userDownloadedJourneysProvider = FutureProvider<List<Journey>>((ref) async {
   return OfflineService().getCachedJourneys();
 });
+
+/// The default budget/transport picked on TravelPreferencesScreen during
+/// onboarding, if any — used to pre-fill the Journey Planner's own budget
+/// and transport selectors instead of always starting from a hardcoded
+/// 'medium'/'car'. Either field may be null if the user skipped that step.
+class TravelPrefs {
+  final String? budgetLevel;
+  final String? transportMode;
+  const TravelPrefs({this.budgetLevel, this.transportMode});
+}
+
+final userTravelPrefsProvider = FutureProvider<TravelPrefs>((ref) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return const TravelPrefs();
+  final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+  return TravelPrefs(
+    budgetLevel: doc.data()?['budgetLevel'] as String?,
+    transportMode: doc.data()?['transportMode'] as String?,
+  );
+});

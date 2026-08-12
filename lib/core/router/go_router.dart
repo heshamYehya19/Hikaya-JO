@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:go_router/go_router.dart';
+import 'page_transitions.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/login_screen.dart';
@@ -18,52 +19,58 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/interests-setup',
       name: 'interestsSetup',
-      builder: (context, state) => const InterestsSetupScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const InterestsSetupScreen()),
     ),
     GoRoute(
       path: '/travel-preferences',
       name: 'travelPreferences',
-      builder: (context, state) => const TravelPreferencesScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const TravelPreferencesScreen()),
     ),
     GoRoute(
       path: '/talk',
       name: 'hikayaTalk',
-      builder: (context, state) => const HikayaTalkScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const HikayaTalkScreen()),
     ),
     GoRoute(
       path: '/',
       name: 'splash',
-      builder: (context, state) => const SplashScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const SplashScreen()),
     ),
     GoRoute(
       path: '/onboarding',
       name: 'onboarding',
-      builder: (context, state) => const OnboardingScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const OnboardingScreen()),
     ),
     GoRoute(
       path: '/login',
       name: 'login',
-      builder: (context, state) => const LoginScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const LoginScreen()),
     ),
     GoRoute(
       path: '/signup',
       name: 'signup',
-      builder: (context, state) => const SignUpScreen(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const SignUpScreen()),
     ),
     GoRoute(
       path: '/home',
       name: 'home',
-      builder: (context, state) => const MainShell(),
+      pageBuilder: (context, state) => smoothPage(key: state.pageKey, child: const MainShell()),
     ),
-    GoRoute(
-      path: '/seed',
-      name: 'seed',
-      builder: (context, state) => const SeedScreen(),
-    ),
-    GoRoute(
-      path: '/geofence-test',
-      name: 'geofenceTest',
-      builder: (context, state) => const GeofenceTestScreen(),
-    ),
+    // Dev-only utility screens — writes/overwrites Firestore data or bypass
+    // location checks, so these must never be reachable in a release build
+    // (a route is just a URL on Flutter Web, so "no button links here" isn't
+    // enough gating on its own).
+    if (kDebugMode) ...[
+      GoRoute(
+        path: '/seed',
+        name: 'seed',
+        builder: (context, state) => const SeedScreen(),
+      ),
+      GoRoute(
+        path: '/geofence-test',
+        name: 'geofenceTest',
+        builder: (context, state) => const GeofenceTestScreen(),
+      ),
+    ],
   ],
 );

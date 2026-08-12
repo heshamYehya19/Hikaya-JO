@@ -6,6 +6,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/location_service.dart';
 import '../../models/challenge.dart';
 import 'camera_capture_screen.dart';
@@ -251,7 +252,7 @@ class _FindYourWayScreenState extends State<FindYourWayScreen> with SingleTicker
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => CameraCaptureScreen(challenge: widget.challenge)),
+                      smoothPageRoute(CameraCaptureScreen(challenge: widget.challenge)),
                     ),
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Take Photo & Unlock'),

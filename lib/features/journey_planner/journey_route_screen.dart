@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
@@ -128,7 +129,7 @@ class _JourneyRouteScreenState extends ConsumerState<JourneyRouteScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ItineraryScreen()),
+                        smoothPageRoute(const ItineraryScreen()),
                       ),
                       icon: const Icon(Icons.list_alt_outlined),
                       label: const Text('View Full Itinerary'),

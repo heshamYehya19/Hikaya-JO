@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../providers/journey_provider.dart';
 import 'itinerary_screen.dart';
 import '../../core/services/notification_service.dart';
@@ -20,6 +21,20 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
   String _transport = 'car';
   double _hours = 6;
   bool _isGenerating = false;
+  bool _appliedSavedPrefs = false;
+
+  /// Applies the onboarding-saved budget/transport as this screen's initial
+  /// selection, once, the first time they load — a later change here
+  /// shouldn't keep getting overwritten by the saved default on rebuild.
+  void _applySavedPrefsOnce(TravelPrefs prefs) {
+    if (_appliedSavedPrefs) return;
+    _appliedSavedPrefs = true;
+    if (prefs.budgetLevel == null && prefs.transportMode == null) return;
+    setState(() {
+      _budget = prefs.budgetLevel ?? _budget;
+      _transport = prefs.transportMode ?? _transport;
+    });
+  }
 
   IconData _iconForInterest(String key) {
     switch (key) {
@@ -92,7 +107,7 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
       ref.read(currentJourneyProvider.notifier).state = journey;
 
       if (mounted) {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
+        Navigator.of(context).push(smoothPageRoute(const ItineraryScreen()));
       }
 
       ref.read(journeyServiceProvider).saveJourney(journey).then((_) {
@@ -122,6 +137,16 @@ class _JourneyPlannerInputScreenState extends ConsumerState<JourneyPlannerInputS
   @override
   Widget build(BuildContext context) {
     final t = AppLocale.of(context).t;
+
+    // setState can't run synchronously during build, so any already-resolved
+    // value is applied on the next frame instead — ref.listen alone would
+    // miss a value that resolved before this widget was even built.
+    final travelPrefs = ref.watch(userTravelPrefsProvider).valueOrNull;
+    if (travelPrefs != null && !_appliedSavedPrefs) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _applySavedPrefsOnce(travelPrefs);
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,

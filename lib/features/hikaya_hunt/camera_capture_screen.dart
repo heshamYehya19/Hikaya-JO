@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -316,17 +315,6 @@ class _CameraCaptureScreenState extends ConsumerState<CameraCaptureScreen> {
                   ),
                 ),
               ),
-              if (kDebugMode) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton.icon(
-                    onPressed: () => _takePhoto(source: ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('🧪 DEV: Choose from Gallery (testing only)'),
-                  ),
-                ),
-              ],
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,

@@ -1,14 +1,13 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/challenge.dart';
 import '../../models/destination.dart';
 import 'camera_capture_screen.dart';
-import '../../core/services/hunt_service.dart';
 import 'find_your_way_screen.dart';
 
 class ChallengeDetailScreen extends StatefulWidget {
@@ -213,7 +212,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => FindYourWayScreen(challenge: challenge)),
+                            smoothPageRoute(FindYourWayScreen(challenge: challenge)),
                           ),
                           icon: const Icon(Icons.explore_outlined),
                           label: const Text('Find Your Way'),
@@ -231,7 +230,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => CameraCaptureScreen(challenge: challenge)),
+                              smoothPageRoute(CameraCaptureScreen(challenge: challenge)),
                             ),
                             icon: const Icon(Icons.camera_alt_outlined),
                             label: Text(t('hunt_take_photo_unlock')),
@@ -241,33 +240,6 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                             ),
-                          ),
-                        ),
-                      ],
-                      // Dev-only shortcut, gated behind kDebugMode so it can never
-                      // ship in a release build — marked for removal before submission.
-                      if (kDebugMode) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton(
-                            onPressed: () => setState(() => _isWithinRange = true),
-                            child: const Text('🛠️ DEV: Skip to Photo Step (bypass GPS check)'),
-                          ),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton(
-                            onPressed: () async {
-                              final huntService = HuntService();
-                              await huntService.completeChallenge(challenge);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('DEV: challenge force-completed')),
-                                );
-                              }
-                            },
-                            child: const Text('🛠️ DEV: Force Complete (skip location check)'),
                           ),
                         ),
                       ],

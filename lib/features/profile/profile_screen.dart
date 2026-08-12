@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/journey.dart';
 import '../../models/destination.dart';
@@ -39,7 +40,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _openJourney(Journey journey) {
     ref.read(currentJourneyProvider.notifier).state = journey;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ItineraryScreen()));
+    Navigator.of(context).push(smoothPageRoute(const ItineraryScreen()));
   }
 
   Future<void> _logout() async {
@@ -214,7 +215,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Text('Achievements', style: AppTypography.headline2.copyWith(fontSize: 18)),
                       TextButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const RewardsBadgesScreen()),
+                          smoothPageRoute(const RewardsBadgesScreen()),
                         ),
                         child: Text(t('profile_view_all_badges')),
                       ),

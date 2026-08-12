@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/colors.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
 import '../../providers/journey_provider.dart';
@@ -65,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
                           onContinue: () {
                             ref.read(currentJourneyProvider.notifier).state = journey;
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => JourneyRouteScreen(journey: journey)),
+                              smoothPageRoute(JourneyRouteScreen(journey: journey)),
                             );
                           },
                         ),
@@ -80,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                       Text(t('home_popular_destinations'), style: Theme.of(context).textTheme.headlineMedium),
                       TextButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const AllDestinationsScreen()),
+                          smoothPageRoute(const AllDestinationsScreen()),
                         ),
                         child: Text(t('home_view_all')),
                       ),
@@ -107,9 +108,7 @@ class HomeScreen extends ConsumerWidget {
                           itemBuilder: (_, i) => DestinationCard(
                             destination: personalized[i],
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => DestinationDetailScreen(destinationId: personalized[i].id),
-                              ),
+                              smoothPageRoute(DestinationDetailScreen(destinationId: personalized[i].id)),
                             ),
                           ),
                         );

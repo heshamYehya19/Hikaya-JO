@@ -15,7 +15,7 @@ class ArrivalWatcherService {
   StreamSubscription<dynamic>? _subscription;
   final Set<String> _notified = {};
 
-  static const double _arrivalRadiusMeters = 150; // "you're generally at this place" — looser than a Hunt photo-challenge geofence
+  static const double _arrivalRadiusMeters = 200; // "you're generally at this place" — looser than a Hunt photo-challenge geofence
 
   Future<void> start({
     required List<Destination> stopsWithCoordinates,

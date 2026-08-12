@@ -84,6 +84,16 @@ class _JourneyMapScreenState extends ConsumerState<JourneyMapScreen> {
     _buildOverviewPath();
 
     setState(() => _isLoading = false);
+
+    // onMapCreated only fits bounds if markers are already populated by the
+    // time the native map view finishes attaching. If the controller
+    // becomes available before this point instead (e.g. the platform view
+    // was already created from a previous build), that fit never happens
+    // and the camera is stuck on initialCameraPosition. Covering both
+    // orderings here rather than assuming markers always win the race.
+    if (_mapController != null && _markers.isNotEmpty) {
+      _fitBounds(_markers.map((m) => m.position).toList());
+    }
   }
 
   Future<BitmapDescriptor> _numberedMarkerIcon(int number) async {
@@ -277,7 +287,13 @@ class _JourneyMapScreenState extends ConsumerState<JourneyMapScreen> {
             onMapCreated: (controller) {
               _mapController = controller;
               if (_markers.isNotEmpty) {
-                _fitBounds(_markers.map((m) => m.position).toList());
+                // A camera command issued the instant the controller
+                // attaches can get dropped before the native view has
+                // finished laying out its surface — deferring one frame
+                // gives it a real size to fit bounds against.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _fitBounds(_markers.map((m) => m.position).toList());
+                });
               }
             },
           ),

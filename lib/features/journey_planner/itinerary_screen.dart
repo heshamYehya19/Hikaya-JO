@@ -4,6 +4,7 @@ import '../../core/services/journey_service.dart';
 import '../../core/services/story_guide_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/router/page_transitions.dart';
 import '../../models/destination.dart';
 import '../../models/journey.dart';
 import '../../providers/journey_provider.dart';
@@ -103,7 +104,7 @@ class _ItineraryScreenState extends ConsumerState<ItineraryScreen> {
                   final isLast = index == journey.stops.length - 1;
                   return GestureDetector(
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => DestinationDetailScreen(destinationId: stop.destinationId)),
+                      smoothPageRoute(DestinationDetailScreen(destinationId: stop.destinationId)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +163,7 @@ class _ItineraryScreenState extends ConsumerState<ItineraryScreen> {
                       icon: Icons.map_outlined,
                       label: 'View on Map',
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => JourneyMapScreen(journey: journey)),
+                        smoothPageRoute(JourneyMapScreen(journey: journey)),
                       ),
                     ),
                   ),

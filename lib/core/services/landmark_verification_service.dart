@@ -103,8 +103,12 @@ class LandmarkVerificationService {
         distanceMeters: distance,
       );
     } catch (e) {
-      // Fail open, same policy as PhotoVerificationService — a network
-      // hiccup shouldn't block a legitimate submission.
+      // landmarkFound: false here doesn't grant a pass by itself — it just
+      // means Tier 1 couldn't say anything either way, so
+      // camera_capture_screen.dart falls through to Tier 2
+      // (PhotoVerificationService). That tier now fails *closed* on its own
+      // errors, so a network hiccup here no longer implies an easy pass
+      // overall — it just changes which tier ends up making the call.
       return LandmarkVerificationResult(landmarkFound: false, matched: false);
     }
   }

@@ -50,10 +50,16 @@ class LocationService {
     );
   }
 
+  // Belt-and-suspenders on top of AndroidSettings.timeLimit above — on some
+  // devices/emulators the plugin's own timeLimit doesn't reliably fire
+  // (forceLocationManager falling back to a provider that never gets a
+  // fix), which otherwise leaves any awaiting caller hung forever. This
+  // guarantees every caller gets an exception to catch within a bounded
+  // time no matter what the platform does.
   Future<Position> getCurrentPosition() {
     return Geolocator.getCurrentPosition(
       locationSettings: _buildOneShotSettings(),
-    );
+    ).timeout(const Duration(seconds: 15));
   }
 
   Stream<Position> watchPosition() {

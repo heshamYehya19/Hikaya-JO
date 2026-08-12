@@ -19,31 +19,33 @@ class HuntService {
   }
 
   /// Awards coins + badge for [challenge]. Idempotent — returns false without
-  /// re-awarding if this challenge was already completed by this user.
+  /// re-awarding if this challenge was already completed by this user. Runs
+  /// as a transaction (not a plain batch) so the "already completed" check
+  /// and the award itself are atomic — a batch's separate read-then-write
+  /// leaves a window for a rapid double-submit to award twice.
   Future<bool> completeChallenge(Challenge challenge) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception('No logged-in user');
 
     final completedRef =
     _firestore.collection('users').doc(userId).collection('completedChallenges').doc(challenge.id);
-
-    final existing = await completedRef.get();
-    if (existing.exists) return false;
-
     final userRef = _firestore.collection('users').doc(userId);
 
-    final batch = _firestore.batch();
-    batch.set(completedRef, {
-      'challengeId': challenge.id,
-      'destinationId': challenge.destinationId,
-      'completedAt': FieldValue.serverTimestamp(),
+    return _firestore.runTransaction<bool>((transaction) async {
+      final existing = await transaction.get(completedRef);
+      if (existing.exists) return false;
+
+      transaction.set(completedRef, {
+        'challengeId': challenge.id,
+        'destinationId': challenge.destinationId,
+        'completedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.update(userRef, {
+        'coins': FieldValue.increment(challenge.rewardCoins),
+        'badges': FieldValue.arrayUnion([challenge.badgeName]),
+        'visitedLocations': FieldValue.arrayUnion([challenge.destinationId]),
+      });
+      return true;
     });
-    batch.update(userRef, {
-      'coins': FieldValue.increment(challenge.rewardCoins),
-      'badges': FieldValue.arrayUnion([challenge.badgeName]),
-      'visitedLocations': FieldValue.arrayUnion([challenge.destinationId]),
-    });
-    await batch.commit();
-    return true;
   }
 }

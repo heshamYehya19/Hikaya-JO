@@ -18,7 +18,8 @@ if (localPropertiesFile.exists()) {
 android {
     namespace = "com.hr.hikaya_jo"
     compileSdk = 36
-    ndkVersion = "27.0.12077973"
+    // Highest version any plugin needs (speech_to_text requires 28.2.13676358) — NDK is backward compatible, so this satisfies every plugin's constraint at once.
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

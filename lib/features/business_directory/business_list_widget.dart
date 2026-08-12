@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/business_service.dart';
 import '../../models/business.dart';
 import 'business_detail_screen.dart';
@@ -63,7 +64,7 @@ class _BusinessListWidgetState extends State<BusinessListWidget> {
           padding: const EdgeInsets.only(bottom: 10),
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => BusinessDetailScreen(business: biz)),
+              smoothPageRoute(BusinessDetailScreen(business: biz)),
             ),
             child: Container(
               padding: const EdgeInsets.all(14),

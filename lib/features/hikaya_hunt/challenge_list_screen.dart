@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
+import '../../core/router/page_transitions.dart';
 import '../../core/services/hunt_service.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/journey_service.dart';
@@ -59,32 +62,51 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
       }
     }
 
-    final Map<String, double> distances = {};
-    final hasPermission = await _locationService.ensureLocationPermission();
+    if (!mounted) return;
 
-    if (hasPermission) {
-      try {
-        final pos = await _locationService.getCurrentPosition();
-        for (final c in challenges) {
-          distances[c.id] = _locationService.distanceToTarget(
-            userLat: pos.latitude,
-            userLng: pos.longitude,
-            targetLat: c.latitude,
-            targetLng: c.longitude,
-          );
-        }
-      } catch (e) {}
-    }
-
-    challenges.sort((a, b) => (distances[a.id] ?? double.infinity).compareTo(distances[b.id] ?? double.infinity));
-
+    // Show the list right away — distance/sorting is a nice-to-have that
+    // fills in a moment later, not something worth blocking the whole
+    // screen on. A slow or hung GPS fix (flaky provider, no fix indoors)
+    // must never leave this screen stuck on a spinner forever.
     setState(() {
       _challenges = challenges;
       _completedIds = completed;
       _visitedDestinationIds = visitedIds;
-      _distancesMeters = distances;
       _destinationMap = {for (var d in allDestinations) d.id: d};
       _isLoading = false;
+    });
+
+    unawaited(_loadDistances(challenges));
+  }
+
+  Future<void> _loadDistances(List<Challenge> challenges) async {
+    final hasPermission = await _locationService.ensureLocationPermission();
+    if (!hasPermission) return;
+
+    Position pos;
+    try {
+      pos = await _locationService.getCurrentPosition();
+    } catch (e) {
+      return;
+    }
+    if (!mounted) return;
+
+    final distances = <String, double>{};
+    for (final c in challenges) {
+      distances[c.id] = _locationService.distanceToTarget(
+        userLat: pos.latitude,
+        userLng: pos.longitude,
+        targetLat: c.latitude,
+        targetLng: c.longitude,
+      );
+    }
+
+    final sorted = List<Challenge>.from(challenges)
+      ..sort((a, b) => (distances[a.id] ?? double.infinity).compareTo(distances[b.id] ?? double.infinity));
+
+    setState(() {
+      _challenges = sorted;
+      _distancesMeters = distances;
     });
   }
 
@@ -152,7 +174,7 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context)
-                        .push(MaterialPageRoute(builder: (_) => const RewardsBadgesScreen()))
+                        .push(smoothPageRoute(const RewardsBadgesScreen()))
                         .then((_) => _load()),
                     icon: const Icon(Icons.emoji_events_outlined, color: AppColors.duneGold),
                   ),
@@ -216,12 +238,10 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                         difficultyColor: _difficultyColor(_difficultyOf(challenge)),
                         distanceLabel: _formatDistance(_distancesMeters[challenge.id]),
                         onTap: () => Navigator.of(context)
-                            .push(MaterialPageRoute(
-                          builder: (_) => ChallengeDetailScreen(
-                            challenge: challenge,
-                            isCompleted: _completedIds.contains(challenge.id),
-                          ),
-                        ))
+                            .push(smoothPageRoute(ChallengeDetailScreen(
+                          challenge: challenge,
+                          isCompleted: _completedIds.contains(challenge.id),
+                        )))
                             .then((_) => _load()),
                       )),
                       const SizedBox(height: 24),
@@ -239,9 +259,9 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                       ...locked.map((challenge) => _LockedCard(
                         challenge: challenge,
                         destination: _destinationMap[challenge.destinationId],
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => DestinationDetailScreen(destinationId: challenge.destinationId),
-                        )),
+                        onTap: () => Navigator.of(context).push(
+                          smoothPageRoute(DestinationDetailScreen(destinationId: challenge.destinationId)),
+                        ),
                       )),
                     ],
                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
+import '../../core/router/page_transitions.dart';
 import '../../providers/journey_provider.dart';
 import '../../widgets/destination_card.dart';
 import 'destination_detail_screen.dart';
@@ -43,9 +44,7 @@ class AllDestinationsScreen extends ConsumerWidget {
                 width: double.infinity,
                 height: double.infinity,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DestinationDetailScreen(destinationId: destinations[i].id),
-                  ),
+                  smoothPageRoute(DestinationDetailScreen(destinationId: destinations[i].id)),
                 ),
               ),
             );
