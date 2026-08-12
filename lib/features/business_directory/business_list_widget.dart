@@ -3,6 +3,7 @@ import '../../core/theme/colors.dart';
 import '../../core/router/page_transitions.dart';
 import '../../core/services/business_service.dart';
 import '../../models/business.dart';
+import '../../widgets/tap_scale.dart';
 import 'business_detail_screen.dart';
 
 class BusinessListWidget extends StatefulWidget {
@@ -62,7 +63,7 @@ class _BusinessListWidgetState extends State<BusinessListWidget> {
         const SizedBox(height: 12),
         ...(_businesses.map((biz) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: GestureDetector(
+          child: TapScale(
             onTap: () => Navigator.of(context).push(
               smoothPageRoute(BusinessDetailScreen(business: biz)),
             ),

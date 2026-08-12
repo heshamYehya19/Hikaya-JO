@@ -138,18 +138,21 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: SizedBox(
-                        height: 200,
-                        width: double.infinity,
-                        child: _destination!.imageAt(0) != null
-                            ? CachedNetworkImage(
-                          imageUrl: _destination!.imageAt(0)!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _heroFallback(),
-                        )
-                            : _heroFallback(),
+                    Hero(
+                      tag: 'destination-hero-${_destination!.id}',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: SizedBox(
+                          height: 200,
+                          width: double.infinity,
+                          child: _destination!.imageAt(0) != null
+                              ? CachedNetworkImage(
+                            imageUrl: _destination!.imageAt(0)!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => _heroFallback(),
+                          )
+                              : _heroFallback(),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -205,33 +208,53 @@ class _DestinationDetailScreenState extends ConsumerState<DestinationDetailScree
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.teal.withOpacity(0.25)),
-                      ),
-                      child: _isLoadingStory
-                          ? Row(
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal),
+                    // Editorial treatment on purpose — no hard border, a soft
+                    // diagonal wash instead of a flat tint, and a large quote
+                    // mark watermark — so the one moment meant to feel like
+                    // reading rather than browsing doesn't look like just
+                    // another bordered card among all the others on this page.
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.teal.withOpacity(0.16), AppColors.surface],
                           ),
-                          const SizedBox(width: 12),
-                          const Text('Writing your story…', style: TextStyle(color: AppColors.textSecondary)),
-                        ],
-                      )
-                          : Text(
-                        _story ?? 'Story unavailable right now.',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          fontStyle: FontStyle.italic,
-                          color: AppColors.textPrimary,
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned(
+                              top: -14,
+                              left: -6,
+                              child: Icon(Icons.format_quote_rounded, size: 44, color: AppColors.teal.withOpacity(0.3)),
+                            ),
+                            _isLoadingStory
+                                ? Row(
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.teal),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Writing your story…', style: TextStyle(color: AppColors.textSecondary)),
+                              ],
+                            )
+                                : Text(
+                              _story ?? 'Story unavailable right now.',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                height: 1.6,
+                                fontStyle: FontStyle.italic,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

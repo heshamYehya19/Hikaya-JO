@@ -12,6 +12,7 @@ import 'destination_detail_screen.dart';
 import 'journey_map_screen.dart';
 import '../../core/services/offline_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/tap_scale.dart';
 
 class ItineraryScreen extends ConsumerStatefulWidget {
   const ItineraryScreen({super.key});
@@ -102,7 +103,7 @@ class _ItineraryScreenState extends ConsumerState<ItineraryScreen> {
                 itemBuilder: (context, index) {
                   final stop = journey.stops[index];
                   final isLast = index == journey.stops.length - 1;
-                  return GestureDetector(
+                  return TapScale(
                     onTap: () => Navigator.of(context).push(
                       smoothPageRoute(DestinationDetailScreen(destinationId: stop.destinationId)),
                     ),

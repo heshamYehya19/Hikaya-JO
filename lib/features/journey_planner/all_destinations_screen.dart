@@ -4,6 +4,8 @@ import '../../core/theme/colors.dart';
 import '../../core/router/page_transitions.dart';
 import '../../providers/journey_provider.dart';
 import '../../widgets/destination_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/shimmer_box.dart';
 import 'destination_detail_screen.dart';
 
 /// Full destinations list — this is what Home's "View All" button opens.
@@ -23,10 +25,11 @@ class AllDestinationsScreen extends ConsumerWidget {
         child: destinationsAsync.when(
           data: (destinations) {
             if (destinations.isEmpty) {
-              return Center(
-                child: Text(
-                  'No destinations yet — run /seed',
-                  style: TextStyle(color: AppColors.textSecondary),
+              return const Center(
+                child: EmptyState(
+                  icon: Icons.explore_off_outlined,
+                  title: 'No destinations yet',
+                  subtitle: 'Run /seed in debug mode to load the starter catalog.',
                 ),
               );
             }
@@ -49,11 +52,22 @@ class AllDestinationsScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => Center(
-            child: Text(
-              "Couldn't load destinations",
-              style: TextStyle(color: AppColors.textSecondary),
+          loading: () => GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: 6,
+            itemBuilder: (_, __) => const ShimmerBox(height: double.infinity, borderRadius: BorderRadius.all(Radius.circular(18))),
+          ),
+          error: (_, __) => const Center(
+            child: EmptyState(
+              icon: Icons.wifi_off_rounded,
+              title: "Couldn't load destinations",
+              subtitle: 'Check your connection and try again.',
             ),
           ),
         ),

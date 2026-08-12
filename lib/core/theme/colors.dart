@@ -10,7 +10,12 @@ class AppColors {
 
   static const Color skyBlue = Color(0xFF89BEE0);       // unused in new design, kept for compat
   static const Color duneGold = Color(0xFFE8C787);       // secondary gold (icons, coin/star accents)
-  static const Color duneLight = Color(0xFF2E2E33);      // was a light border — now dark-mode border
+  // Brightened from the original 0xFF2E2E33 — this is what defines every
+  // card/button/input edge in the app, and the old value was low-contrast
+  // enough to nearly disappear in direct sunlight (this is an outdoor,
+  // walk-around app). Everything that reads AppColors.duneLight picks up
+  // the improvement automatically.
+  static const Color duneLight = Color(0xFF3D3D44);
   static const Color teal = Color(0xFF4CC9B0);           // success / "done" / in-range accent
   static const Color deepTeal = Color(0xFFD4A857);       // was brand-primary teal — now brand-primary gold
   static const Color amberStar = Color(0xFFD4A857);      // star accent — matches primary gold
@@ -19,7 +24,10 @@ class AppColors {
   static const Color background = Color(0xFF0D0D0F);
   static const Color surface = Color(0xFF17171A);
   static const Color textPrimary = Color(0xFFF5F1E8);
-  static const Color textSecondary = Color(0xFFA3A0A0);
+  // Brightened from 0xFFA3A0A0 for the same outdoor-glare reason as
+  // duneLight above — secondary text (timestamps, subtitles, hints) is used
+  // everywhere and was the most glare-vulnerable text color in the app.
+  static const Color textSecondary = Color(0xFFB8B5B3);
 
   // Semantic
   static const Color success = Color(0xFF4CC9B0);

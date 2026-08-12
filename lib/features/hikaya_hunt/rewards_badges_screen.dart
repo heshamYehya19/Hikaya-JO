@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/localization/app_locale.dart';
+import '../../widgets/empty_state.dart';
 
 class RewardsBadgesScreen extends StatelessWidget {
   const RewardsBadgesScreen({super.key});
@@ -72,7 +73,10 @@ class RewardsBadgesScreen extends StatelessWidget {
                         Expanded(
                           child: badges.isEmpty
                               ? Center(
-                            child: Text(t('hunt_rewards_no_badges'), style: TextStyle(color: AppColors.textSecondary)),
+                            child: EmptyState(
+                              icon: Icons.emoji_events_outlined,
+                              title: t('hunt_rewards_no_badges'),
+                            ),
                           )
                               : GridView.builder(
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

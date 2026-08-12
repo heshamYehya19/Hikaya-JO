@@ -15,6 +15,8 @@ import '../../providers/journey_provider.dart';
 import '../journey_planner/itinerary_screen.dart';
 import '../hikaya_hunt/rewards_badges_screen.dart';
 import '../../providers/main_tab_provider.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/tap_scale.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -223,9 +225,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   badges.isEmpty
-                      ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No badges yet — complete a Hikaya Hunt challenge to earn one', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                      ? const EmptyState(
+                    icon: Icons.emoji_events_outlined,
+                    title: 'No badges yet',
+                    subtitle: 'Complete a Hikaya Hunt challenge to earn your first one.',
+                    padding: EdgeInsets.symmetric(vertical: 20),
                   )
                       : SizedBox(
                     height: 90,
@@ -265,14 +269,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 12),
                   journeysAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator(color: AppColors.deepTeal)),
-                    error: (_, __) => Padding(
+                    error: (_, __) => EmptyState(
+                      icon: Icons.map_outlined,
+                      title: t('profile_no_journeys'),
                       padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
                     ),
                     data: (journeys) => journeys.isEmpty
-                        ? Padding(
+                        ? EmptyState(
+                      icon: Icons.map_outlined,
+                      title: t('profile_no_journeys'),
+                      subtitle: 'Plan one from the Journey tab to see it here.',
                       padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(t('profile_no_journeys'), style: const TextStyle(color: AppColors.textSecondary)),
                     )
                         : Column(
                       children: journeys.map((journey) => _JourneyRow(
@@ -298,20 +305,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 12),
                   downloadedAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator(color: AppColors.deepTeal)),
-                    error: (_, __) => const Padding(
+                    error: (_, __) => const EmptyState(
+                      icon: Icons.download_done_rounded,
+                      title: 'Nothing downloaded yet',
+                      subtitle: 'Tap "Download Offline" on any journey to save it here.',
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
                     ),
                     data: (downloaded) => downloaded.isEmpty
-                        ? const Padding(
+                        ? const EmptyState(
+                      icon: Icons.download_done_rounded,
+                      title: 'Nothing downloaded yet',
+                      subtitle: 'Tap "Download Offline" on any journey to save it here.',
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        'Nothing downloaded yet — tap "Download Offline" on any journey to save it here',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
                     )
                         : Column(
                       children: downloaded.map((journey) => _JourneyRow(
@@ -351,7 +356,7 @@ class _JourneyRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: GestureDetector(
+      child: TapScale(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(12),

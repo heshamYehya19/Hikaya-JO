@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/colors.dart';
 import '../models/destination.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'tap_scale.dart';
 
 /// Photo card used in horizontal destination lists (Home's "Popular
 /// Destinations", journey results, etc). Falls back to a gradient + type
@@ -37,7 +38,7 @@ class DestinationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasImage = destination.imageAt(0) != null;
 
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
       child: SizedBox(
         width: width,
@@ -47,13 +48,16 @@ class DestinationCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              hasImage
-                  ? CachedNetworkImage(
-                imageUrl: destination.imageAt(0)!,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => _fallback(),
-              )
-                  : _fallback(),
+              Hero(
+                tag: 'destination-hero-${destination.id}',
+                child: hasImage
+                    ? CachedNetworkImage(
+                  imageUrl: destination.imageAt(0)!,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _fallback(),
+                )
+                    : _fallback(),
+              ),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

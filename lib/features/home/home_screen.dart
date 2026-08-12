@@ -10,6 +10,8 @@ import '../../models/journey.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../widgets/destination_card.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/shimmer_box.dart';
 import '../journey_planner/all_destinations_screen.dart';
 import '../journey_planner/destination_detail_screen.dart';
 import '../journey_planner/itinerary_screen.dart';
@@ -94,9 +96,10 @@ class HomeScreen extends ConsumerWidget {
                       data: (destinations) {
                         if (destinations.isEmpty) {
                           return Center(
-                            child: Text(
-                              t('home_no_destinations'),
-                              style: TextStyle(color: AppColors.textSecondary),
+                            child: EmptyState(
+                              icon: Icons.explore_off_outlined,
+                              title: t('home_no_destinations'),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
                           );
                         }
@@ -113,11 +116,12 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const ShimmerCardRow(),
                       error: (_, __) => Center(
-                        child: Text(
-                          t('home_load_error'),
-                          style: TextStyle(color: AppColors.textSecondary),
+                        child: EmptyState(
+                          icon: Icons.wifi_off_rounded,
+                          title: t('home_load_error'),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                       ),
                     ),

@@ -13,6 +13,9 @@ import '../../core/services/location_service.dart';
 import '../../core/services/journey_service.dart';
 import '../../models/challenge.dart';
 import '../../models/destination.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/shimmer_box.dart';
+import '../../widgets/tap_scale.dart';
 import 'challenge_detail_screen.dart';
 import 'rewards_badges_screen.dart';
 import '../journey_planner/destination_detail_screen.dart';
@@ -210,7 +213,16 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.deepTeal))
+                  ? ListView(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                children: List.generate(
+                  4,
+                  (_) => const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: ShimmerBox(height: 76, borderRadius: BorderRadius.all(Radius.circular(16))),
+                  ),
+                ),
+              )
                   : RefreshIndicator(
                 onRefresh: _load,
                 color: AppColors.deepTeal,
@@ -218,9 +230,11 @@ class _ChallengeListScreenState extends State<ChallengeListScreen> {
                 child: (unlocked.isEmpty && locked.isEmpty)
                     ? ListView(
                   children: [
-                    const SizedBox(height: 80),
-                    Center(
-                      child: Text(t('hunt_empty'), style: TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 60),
+                    EmptyState(
+                      icon: Icons.emoji_events_outlined,
+                      title: t('hunt_empty'),
+                      subtitle: 'Listen to a destination\'s story in person to unlock its first challenge.',
                     ),
                   ],
                 )
@@ -314,58 +328,77 @@ class _UnlockedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Shadow-elevated instead of bordered, with a colored accent stripe —
+    // this is the single most-repeated card shape in the app, so it's the
+    // one place a shift away from "everything is a bordered rounded box"
+    // reads clearly rather than being lost among the rest.
+    final accentColor = isDone ? AppColors.teal : difficultyColor;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
+      child: TapScale(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDone ? AppColors.teal : AppColors.duneLight, width: isDone ? 1.5 : 1),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ChallengeThumbnail(destination: destination, isDone: isDone),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(challenge.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text(challenge.destinationName, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: difficultyColor.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                          child: Text(difficultyLabel, style: TextStyle(color: difficultyColor, fontSize: 11, fontWeight: FontWeight.w600)),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          isDone ? 'Completed' : '+${challenge.rewardCoins} coins',
-                          style: TextStyle(color: isDone ? AppColors.teal : AppColors.duneGold, fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    if (!isDone && distanceLabel.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.28), blurRadius: 12, offset: const Offset(0, 4))],
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 4, color: accentColor),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textSecondary),
-                          const SizedBox(width: 2),
-                          Text(distanceLabel, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          _ChallengeThumbnail(destination: destination, isDone: isDone),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(challenge.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary)),
+                                const SizedBox(height: 2),
+                                Text(challenge.destinationName, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(color: difficultyColor.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                                      child: Text(difficultyLabel, style: TextStyle(color: difficultyColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isDone ? 'Completed' : '+${challenge.rewardCoins} coins',
+                                      style: TextStyle(color: isDone ? AppColors.teal : AppColors.duneGold, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                                if (!isDone && distanceLabel.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textSecondary),
+                                      const SizedBox(width: 2),
+                                      Text(distanceLabel, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -387,7 +420,7 @@ class _LockedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
+      child: TapScale(
         onTap: onTap,
         child: Opacity(
           opacity: 0.55,
@@ -396,7 +429,7 @@ class _LockedCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.duneLight),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3))],
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
